@@ -1,746 +1,351 @@
 "use client";
-
-import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  FaStar, 
-  FaMapMarkerAlt, 
-  FaCalendar, 
-  FaUsers, 
-  FaArrowLeft, 
-  FaCheck,
-  FaTwitter,
-  FaFacebookF,
-  FaInstagram 
+import {
+  FaStar, FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaArrowLeft, FaCheck, FaTimes,
+  FaSun, FaCloud, FaCloudRain, FaChevronLeft, FaChevronRight, FaMinus, FaPlus,
+  FaLock, FaShieldAlt,
 } from "react-icons/fa";
-import Navbar from "@/Components/navbar";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer"; 
+import { packagesApi, weatherApi, messagesApi } from "@/lib/api";
+import { isLoggedIn, getUser } from "@/lib/auth";
 
-interface PackageDetail {
-  id: number;
-  name: string;
-  image: string;
-  rating: number;
-  price: string;
-  capacity: string;
-  duration: string;
-  author: string;
-  description: string;
-  inclusions: string[];
-  itinerary: { day: number; title: string; description: string }[];
-  location: string;
-  difficulty: string;
-  groupSize: string;
-  bestSeason: string;
-}
-
-export default function PackageDetailPage() {
+const PackageDetailPage = () => {
   const params = useParams();
   const router = useRouter();
-  const [packageDetail, setPackageDetail] = useState<PackageDetail | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [travelers, setTravelers] = useState(2);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [packageData, setPackageData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const slug = params.slug as string;
 
   useEffect(() => {
-    const fetchPackageDetail = async () => {
+    const loadPackage = async () => {
       setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the slug from params
-      const packageSlug = params.slug as string;
-      
-      // Convert slug back to package name for matching
-      const packageName = packageSlug
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-      
-      // Mock packages data - matching the listing page data
-      const mockPackages: PackageDetail[] = [
-        {
-          id: 1,
-          name: "3 Days in Swat",
-          image: "/swat.jpg",
-          rating: 5,
-          price: "24,000 Pkr",
-          capacity: "14/20",
-          duration: "3 Days",
-          author: "By Muhammad Umair",
-          description: "Experience the breathtaking beauty of Swat Valley with our 3-day guided tour. Visit the most scenic spots, enjoy local cuisine, and create unforgettable memories in the Switzerland of the East.",
-          inclusions: [
-            "Accommodation for 2 nights in 3-star hotels",
-            "All meals included (Breakfast, Lunch, Dinner)",
-            "Professional English-speaking guide",
-            "Private transportation throughout the tour",
-            "All entrance fees to attractions",
-            "Travel insurance coverage",
-            "Bottled water during travel",
-            "First-aid kit available"
-          ],
-          itinerary: [
-            { 
-              day: 1, 
-              title: "Arrival in Swat Valley", 
-              description: "Arrive at Swat, transfer to hotel. After settling in, we'll take an evening tour of the local Mingora bazaar. Enjoy traditional Swati cuisine for dinner." 
-            },
-            { 
-              day: 2, 
-              title: "Full Day Sightseeing", 
-              description: "Visit Malam Jabba ski resort, Mahodand Lake (Queen of Lakes), and explore the beautiful Marghazar Valley. Experience local culture and scenic views." 
-            },
-            { 
-              day: 3, 
-              title: "Departure with Memories", 
-              description: "Morning hike to Swat Museum to explore Gandhara civilization artifacts. After breakfast, departure with beautiful memories of Swat Valley." 
-            }
-          ],
-          location: "Swat Valley, Khyber Pakhtunkhwa",
-          difficulty: "Easy to Moderate",
-          groupSize: "Small Groups (6-20 people)",
-          bestSeason: "March to November"
-        },
-        {
-          id: 2,
-          name: "5 Days in Hunza",
-          image: "/hunza.jpg",
-          rating: 5,
-          price: "35,000 Pkr",
-          capacity: "12/20",
-          duration: "5 Days",
-          author: "By Ali Khan",
-          description: "Discover the majestic beauty of Hunza Valley with our 5-day adventure. Experience breathtaking views, ancient forts, and warm hospitality in the heart of Gilgit-Baltistan.",
-          inclusions: [
-            "Accommodation for 4 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees",
-            "Travel insurance"
-          ],
-          itinerary: [
-            { 
-              day: 1, 
-              title: "Arrival in Hunza", 
-              description: "Arrive at Hunza, check into hotel, visit Karimabad bazaar and enjoy panoramic views of Rakaposhi mountain." 
-            },
-            { 
-              day: 2, 
-              title: "Altit & Baltit Forts", 
-              description: "Explore ancient Altit and Baltit forts dating back to 800 years. Learn about Hunza culture and history." 
-            },
-            { 
-              day: 3, 
-              title: "Attabad Lake", 
-              description: "Boat ride on the stunning turquoise waters of Attabad Lake, visit Passu Cones and Suspension Bridge." 
-            },
-            { 
-              day: 4, 
-              title: "Khunjerab Pass", 
-              description: "Day trip to Khunjerab Pass (15,397 ft), Pakistan-China border. Spot Marco Polo sheep and enjoy high-altitude scenery." 
-            },
-            { 
-              day: 5, 
-              title: "Departure", 
-              description: "Last minute shopping for local handicrafts, traditional breakfast, and departure with lifetime memories." 
-            }
-          ],
-          location: "Hunza Valley, Gilgit-Baltistan",
-          difficulty: "Moderate",
-          groupSize: "Small Groups (8-20 people)",
-          bestSeason: "April to October"
-        },
-        {
-          id: 3,
-          name: "7 Days in Skardu",
-          image: "/skardu.jpg",
-          rating: 5,
-          price: "45,000 Pkr",
-          capacity: "16/20",
-          duration: "7 Days",
-          author: "By Sara Ahmed",
-          description: "Explore the gateway to the world's highest mountains with our 7-day Skardu tour. Visit Shangrila Resort, Upper Kachura Lake, and experience breathtaking landscapes.",
-          inclusions: [
-            "Accommodation for 6 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees",
-            "Travel insurance",
-            "Photography assistance"
-          ],
-          itinerary: [
-            { 
-              day: 1, 
-              title: "Arrival in Skardu", 
-              description: "Arrival at Skardu airport, transfer to hotel. Acclimatization walk around Skardu town." 
-            },
-            { 
-              day: 2, 
-              title: "Shangrila Resort", 
-              description: "Visit the famous Shangrila Resort and Lower Kachura Lake. Enjoy boating and local cuisine." 
-            },
-            { 
-              day: 3, 
-              title: "Upper Kachura Lake", 
-              description: "Explore the pristine Upper Kachura Lake, surrounded by majestic mountains." 
-            },
-            { 
-              day: 4, 
-              title: "Kharpocho Fort", 
-              description: "Visit the ancient Kharpocho Fort overlooking the Indus River." 
-            },
-            { 
-              day: 5, 
-              title: "Deosai Plains", 
-              description: "Day trip to Deosai National Park, the world's second highest plateau." 
-            },
-            { 
-              day: 6, 
-              title: "Satpara Lake", 
-              description: "Visit Satpara Lake and the nearby villages to experience local culture." 
-            },
-            { 
-              day: 7, 
-              title: "Departure", 
-              description: "Last morning in Skardu, breakfast, and departure to airport." 
-            }
-          ],
-          location: "Skardu, Gilgit-Baltistan",
-          difficulty: "Moderate to Difficult",
-          groupSize: "Small Groups (6-15 people)",
-          bestSeason: "May to September"
-        },
-        {
-          id: 4,
-          name: "10 Days in Kalam",
-          image: "/kalam.jpg",
-          rating: 5,
-          price: "28,000 Pkr",
-          capacity: "18/20",
-          duration: "10 Days",
-          author: "By Usman Ali",
-          description: "Immerse yourself in the serene beauty of Kalam Valley with our 10-day tour. Experience local culture, hiking adventures, and natural wonders.",
-          inclusions: [
-            "Accommodation for 9 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees",
-            "Travel insurance",
-            "Hiking equipment"
-          ],
-          itinerary: [
-            { 
-              day: 1, 
-              title: "Arrival in Kalam", 
-              description: "Arrival and transfer to hotel. Orientation and welcome dinner." 
-            },
-            { 
-              day: 2, 
-              title: "Local Exploration", 
-              description: "Explore Kalam town, visit local markets and enjoy Swati culture." 
-            },
-            { 
-              day: 3, 
-              title: "Ushu Forest", 
-              description: "Visit Ushu Forest and Matiltan, enjoy nature walks." 
-            },
-            { 
-              day: 4, 
-              title: "Mahodand Lake", 
-              description: "Day trip to Mahodand Lake, enjoy boating and picnic." 
-            },
-            { 
-              day: 5, 
-              title: "Jahaz Banda", 
-              description: "Trek to Jahaz Banda meadows for stunning views." 
-            },
-            { 
-              day: 6, 
-              title: "Cultural Day", 
-              description: "Experience local culture, traditional music and dance." 
-            },
-            { 
-              day: 7, 
-              title: "Fishing Day", 
-              description: "Try your hand at trout fishing in Swat River." 
-            },
-            { 
-              day: 8, 
-              title: "Free Day", 
-              description: "Free day for personal exploration or relaxation." 
-            },
-            { 
-              day: 9, 
-              title: "Last Day Activities", 
-              description: "Final sightseeing and shopping for souvenirs." 
-            },
-            { 
-              day: 10, 
-              title: "Departure", 
-              description: "Breakfast and departure with beautiful memories." 
-            }
-          ],
-          location: "Kalam Valley, Khyber Pakhtunkhwa",
-          difficulty: "Easy to Moderate",
-          groupSize: "Small Groups (10-20 people)",
-          bestSeason: "May to October"
-        },
-        {
-          id: 5,
-          name: "4 Days in Swat Valley",
-          image: "/swat.jpg",
-          rating: 5,
-          price: "22,000 Pkr",
-          capacity: "15/20",
-          duration: "4 Days",
-          author: "By Muhammad Umair",
-          description: "A shorter version of our Swat tour covering the main highlights of Swat Valley in 4 days.",
-          inclusions: [
-            "Accommodation for 3 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees"
-          ],
-          itinerary: [
-            { day: 1, title: "Arrival", description: "Arrival and hotel check-in." },
-            { day: 2, title: "Sightseeing", description: "Visit main attractions." },
-            { day: 3, title: "Adventure Day", description: "Hiking and outdoor activities." },
-            { day: 4, title: "Departure", description: "Breakfast and departure." }
-          ],
-          location: "Swat Valley, Khyber Pakhtunkhwa",
-          difficulty: "Easy",
-          groupSize: "Small Groups (8-15 people)",
-          bestSeason: "March to November"
-        },
-        {
-          id: 6,
-          name: "6 Days in Hunza Valley",
-          image: "/hunza.jpg",
-          rating: 5,
-          price: "38,000 Pkr",
-          capacity: "10/20",
-          duration: "6 Days",
-          author: "By Ali Khan",
-          description: "Extended Hunza tour covering more attractions in the valley.",
-          inclusions: [
-            "Accommodation for 5 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees"
-          ],
-          itinerary: [
-            { day: 1, title: "Arrival", description: "Arrival and hotel check-in." },
-            { day: 2, title: "Karimabad", description: "Explore Karimabad." },
-            { day: 3, title: "Forts", description: "Visit ancient forts." },
-            { day: 4, title: "Attabad Lake", description: "Boat ride at Attabad." },
-            { day: 5, title: "Khunjerab", description: "Visit Khunjerab Pass." },
-            { day: 6, title: "Departure", description: "Breakfast and departure." }
-          ],
-          location: "Hunza Valley, Gilgit-Baltistan",
-          difficulty: "Moderate",
-          groupSize: "Small Groups (8-12 people)",
-          bestSeason: "April to October"
-        },
-        {
-          id: 7,
-          name: "8 Days in Skardu Tour",
-          image: "/skardu.jpg",
-          rating: 5,
-          price: "48,000 Pkr",
-          capacity: "14/20",
-          duration: "8 Days",
-          author: "By Sara Ahmed",
-          description: "Comprehensive Skardu tour covering all major attractions.",
-          inclusions: [
-            "Accommodation for 7 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees"
-          ],
-          itinerary: [
-            { day: 1, title: "Arrival", description: "Arrival and hotel check-in." },
-            { day: 2, title: "Shangrila", description: "Visit Shangrila Resort." },
-            { day: 3, title: "Kachura", description: "Explore Kachura Lakes." },
-            { day: 4, title: "Fort Visit", description: "Visit Kharpocho Fort." },
-            { day: 5, title: "Deosai", description: "Trip to Deosai Plains." },
-            { day: 6, title: "Satpara", description: "Visit Satpara Lake." },
-            { day: 7, title: "Culture", description: "Cultural experiences." },
-            { day: 8, title: "Departure", description: "Breakfast and departure." }
-          ],
-          location: "Skardu, Gilgit-Baltistan",
-          difficulty: "Moderate",
-          groupSize: "Small Groups (6-14 people)",
-          bestSeason: "May to September"
-        },
-        {
-          id: 8,
-          name: "12 Days in Kalam Valley",
-          image: "/kalam.jpg",
-          rating: 5,
-          price: "32,000 Pkr",
-          capacity: "16/20",
-          duration: "12 Days",
-          author: "By Usman Ali",
-          description: "Extended Kalam tour for nature lovers and adventure seekers.",
-          inclusions: [
-            "Accommodation for 11 nights",
-            "All meals included",
-            "Professional guide",
-            "Transportation",
-            "Entrance fees"
-          ],
-          itinerary: [
-            { day: 1, title: "Arrival", description: "Arrival and hotel check-in." },
-            { day: 2, title: "Exploration", description: "Explore Kalam town." },
-            { day: 3, title: "Forest", description: "Visit Ushu Forest." },
-            { day: 4, title: "Lake", description: "Trip to Mahodand Lake." },
-            { day: 5, title: "Trekking", description: "Trek to Jahaz Banda." },
-            { day: 6, title: "Culture", description: "Cultural activities." },
-            { day: 7, title: "Fishing", description: "Fishing day." },
-            { day: 8, title: "Relax", description: "Free day." },
-            { day: 9, title: "Hiking", description: "Mountain hiking." },
-            { day: 10, title: "Villages", description: "Visit local villages." },
-            { day: 11, title: "Souvenirs", description: "Shopping day." },
-            { day: 12, title: "Departure", description: "Breakfast and departure." }
-          ],
-          location: "Kalam Valley, Khyber Pakhtunkhwa",
-          difficulty: "Moderate",
-          groupSize: "Small Groups (10-16 people)",
-          bestSeason: "May to October"
-        }
-      ];
-      
-      // Find package by name (from slug)
-      const data = mockPackages.find(pkg => 
-        pkg.name.toLowerCase().replace(/\s+/g, '-') === packageSlug.toLowerCase()
-      ) || mockPackages[0];
-      
-      setPackageDetail(data);
-      setLoading(false);
+      setError(null);
+      try {
+        const response = await packagesApi.getBySlug(slug);
+        const result = response.data;
+        if (result.success && result.data) setPackageData(result.data);
+        else setError(result.message || "Package not found");
+      } catch (err: any) { setError(err.response?.data?.message || err.message || "Failed to load package"); }
+      finally { setLoading(false); }
     };
+    if (slug) loadPackage();
+  }, [slug]);
 
-    if (params.slug) {
-      fetchPackageDetail();
+  useEffect(() => {
+    if (activeTab === "weather" && packageData && !weatherData && !weatherLoading) {
+      const fetchWeather = async () => {
+        setWeatherLoading(true);
+        const city =
+          packageData.destinations?.city ||
+          packageData.destinations?.name ||
+          packageData.location ||
+          "Lahore";
+        try {
+          const response = await weatherApi.getForecast(city);
+          const result = response.data;
+          if (result.success && result.data) {
+            setWeatherData(result.data);
+          } else {
+            console.warn("[Weather] API returned no data for city:", city);
+            setWeatherData(null);
+          }
+        } catch (err: any) {
+          const status = err?.response?.status;
+          const msg = err?.response?.data?.message || err?.message || "unknown";
+          console.error(`[Weather] Failed for city "${city}" — status=${status} msg=${msg}`);
+          setWeatherData(null);
+        } finally {
+          setWeatherLoading(false);
+        }
+      };
+      fetchWeather();
     }
-  }, [params.slug]);
+  }, [activeTab, packageData, weatherData, weatherLoading]);
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex">
-        {[...Array(5)].map((_, index) => (
-          <FaStar
-            key={index}
-            className={`w-5 h-5 ${
-              index < rating
-                ? "text-yellow-500 fill-yellow-500"
-                : "text-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-    );
+  const handleBookNow = () => {
+    if (!isLoggedIn()) { router.push("/login"); return; }
+    if (getUser()?.role !== "TRAVELER") { setError("Only travelers can book packages"); return; }
+    // Route through the unified booking pipeline: travel-detail → billing → confirmation
+    router.push(`/booking/travel-detail/${packageData.slug}?type=package`);
+  };
+
+  const handleTravelerChange = (type: "increase" | "decrease") => {
+    if (type === "increase" && travelers < 20) setTravelers(travelers + 1);
+    else if (type === "decrease" && travelers > 1) setTravelers(travelers - 1);
+  };
+
+  const renderStars = (rating: number) => (
+    <div className="flex">{[...Array(5)].map((_, i) => (<FaStar key={i} className={`w-4 h-4 ${i < Math.floor(rating) ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />))}</div>
+  );
+
+  const getWeatherIcon = (condition: string) => {
+    const cond = condition?.toLowerCase() || "";
+    if (cond.includes("rain") || cond.includes("drizzle")) return <FaCloudRain className="w-8 h-8 mx-auto text-blue-500 mb-2" />;
+    if (cond.includes("cloud") || cond.includes("overcast")) return <FaCloud className="w-8 h-8 mx-auto text-gray-500 mb-2" />;
+    return <FaSun className="w-8 h-8 mx-auto text-yellow-500 mb-2" />;
+  };
+
+  const getAuthorName = () => {
+    if (packageData?.guides?.users) return `${packageData.guides.users.firstName} ${packageData.guides.users.lastName}`;
+    if (packageData?.agencies?.name) return packageData.agencies.name;
+    return "VoyageX";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7]">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#008A1E] mb-4"></div>
-            <p className="text-gray-600">Loading package details...</p>
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen bg-[#F2F4F7]"><Navbar /><div className="text-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#008A1E] mx-auto mb-4"></div><p className="text-gray-600">Loading package details...</p></div></div>
     );
   }
 
-  if (!packageDetail) {
+  if (error || !packageData) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7]">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center py-20">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Package not found</h1>
-            <Link 
-              href="/Packages"
-              className="inline-flex items-center gap-2 text-[#008A1E] hover:text-[#006816] font-medium"
-            >
-              <FaArrowLeft /> Back to Packages
-            </Link>
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen bg-[#F2F4F7]"><Navbar /><div className="text-center py-20"><h1 className="text-2xl font-bold text-gray-800 mb-4">{error || "Package not found"}</h1><button onClick={() => router.push("/packages")} className="inline-flex items-center gap-2 text-[#008A1E] hover:text-[#006816] font-medium"><FaArrowLeft /> Back to Packages</button></div></div>
     );
   }
+
+  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+  const resolveUrl = (path: string) => {
+    if (!path) return '/agency-placeholder.jpg';
+    if (path.startsWith('http')) return path;
+    return `${BASE}/${path.replace(/^\//, '')}`;
+  };
+  const images = (packageData.images || []).map(resolveUrl);
+  const displayImage = images[0] || "/agency-placeholder.jpg";
+  const totalPrice = (packageData.price || 0) * travelers;
 
   return (
-    <div className="min-h-screen bg-[#F2F4F7]">
-      {/* Navbar */}
+    <div className="min-h-screen bg-[#F2F4F7] overflow-x-hidden">
       <Navbar />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Back Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push("/Packages")}
-            className="inline-flex items-center gap-2 text-[#008A1E] hover:text-[#006816] font-medium"
-          >
-            <FaArrowLeft /> Back to Packages
-          </button>
-        </div>
-
-        {/* Package Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-            <div className="flex-1">
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-2">{packageDetail.name}</h1>
-              <p className="text-gray-600 mb-4 text-lg">{packageDetail.author}</p>
-              
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  {renderStars(packageDetail.rating)}
-                  <span className="text-gray-700">{packageDetail.rating}.0 Rating</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <FaCalendar className="text-[#008A1E]" />
-                  <span>{packageDetail.duration}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <FaUsers className="text-[#008A1E]" />
-                  <span>Capacity: {packageDetail.capacity}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <FaMapMarkerAlt className="text-[#008A1E]" />
-                  <span>{packageDetail.location}</span>
-                </div>
-              </div>
-
-              <div className="text-3xl font-bold text-[#008A1E] mb-4">
-                {packageDetail.price}
-              </div>
-
-              <p className="text-gray-700 mb-6">
-                {packageDetail.description}
-              </p>
-
-            </div>
-
-            <div className="lg:w-80">
-              <div className="bg-[#E6F4EA] rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">Quick Facts</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Difficulty:</span>
-                    <span className="font-medium text-gray-800">{packageDetail.difficulty}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Group Size:</span>
-                    <span className="font-medium text-gray-800">{packageDetail.groupSize}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Best Season:</span>
-                    <span className="font-medium text-gray-800">{packageDetail.bestSeason}</span>
-                  </div>
-                </div>
-              </div>
+      <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] bg-cover bg-center" style={{ backgroundImage: `url('${displayImage}')` }}>
+        <button onClick={() => router.back()} className="absolute top-20 left-4 md:left-8 z-10 text-white bg-black/20 hover:bg-black/30 p-2 rounded-full"><FaArrowLeft className="w-5 h-5 md:w-6 md:h-6" /></button>
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white bg-gradient-to-t from-black/70 to-transparent">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-2 mb-2"><FaMapMarkerAlt className="w-4 h-4" /><span>{packageData.destinations?.name || packageData.region || packageData.location || "Pakistan"}</span></div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-3">{packageData.title}</h1>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-1"><FaStar className="text-yellow-400" /><span>{packageData.rating || 0} Ratings</span></div>
+              <span>{(packageData.price || 0).toLocaleString()} Rs/Person</span>
+              <span className="flex items-center gap-1"><FaCalendarAlt className="w-3 h-3" />{packageData.duration} Days</span>
+              <span className="flex items-center gap-1"><FaUsers className="w-3 h-3" />{packageData.maxGroupSize || "N/A"} capacity</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Image & Itinerary */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Package Image */}
-            <div className="relative h-[400px] rounded-2xl overflow-hidden">
-              <Image
-                src={packageDetail.image}
-                alt={packageDetail.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 66vw"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const fallback = document.createElement('div');
-                    fallback.className = 'absolute inset-0 bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center';
-                    fallback.innerHTML = `<div class="text-center p-8"><h3 class="text-2xl font-bold text-gray-800 mb-2">${packageDetail.name}</h3><p class="text-gray-600">Beautiful Destination</p></div>`;
-                    parent.appendChild(fallback);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Itinerary */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Itinerary</h2>
-              <div className="space-y-6">
-                {packageDetail.itinerary.map((day) => (
-                  <div key={day.day} className="flex gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-[#008A1E] rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">Day {day.day}</span>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">{day.title}</h3>
-                      <p className="text-gray-600">{day.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Booking & Inclusions */}
-          <div className="space-y-6">
-            {/* What's Included */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">What's Included</h2>
-              <ul className="space-y-3">
-                {packageDetail.inclusions.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <FaCheck className="w-5 h-5 text-[#008A1E] flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Book Now Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Book This Package</h2>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Price per person</span>
-                  <span className="text-xl font-bold text-[#008A1E]">{packageDetail.price}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Duration</span>
-                  <span className="font-medium text-gray-800">{packageDetail.duration}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Available spots</span>
-                  <span className="font-medium text-gray-800">{packageDetail.capacity}</span>
-                </div>
-              </div>
-
-              <button className="
-                w-full
-                py-4
-                bg-[#008A1E]
-                text-white
-                font-semibold
-                text-lg
-                rounded-xl
-                hover:bg-[#006816]
-                transition-colors
-                duration-300
-                shadow-md
-                hover:shadow-lg
-              ">
-                Book Now
+      <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-6 overflow-x-auto pb-0">
+            {["overview", "itinerary", "gallery", "included", "reviews", "weather"].map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`py-4 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? "border-green-600 text-green-600" : "border-transparent text-gray-600 hover:text-gray-900"}`}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
-              
-              <p className="text-sm text-gray-500 mt-4 text-center">
-                Only {packageDetail.capacity.split('/')[0]} spots left. Book now to secure your place!
-              </p>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {activeTab === "overview" && (
+              <>
+                <section><h2 className="text-2xl font-bold mb-4">Tour Overview</h2><p className="text-gray-600 leading-relaxed">{packageData.description || "No description available."}</p></section>
+                {packageData.highlights?.length > 0 && (
+                  <section><h2 className="text-2xl font-bold mb-4">Tour Highlights</h2><div className="grid sm:grid-cols-2 gap-3">{packageData.highlights.map((item: string, i: number) => (<div key={i} className="flex items-start gap-2"><FaCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" /><span className="text-gray-700">{item}</span></div>))}</div></section>
+                )}
+                {packageData.requirements?.length > 0 && (
+                  <section><h2 className="text-2xl font-bold mb-4">Requirements</h2><div className="grid sm:grid-cols-2 gap-3">{packageData.requirements.map((item: string, i: number) => (<div key={i} className="flex items-start gap-2"><FaTimes className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" /><span className="text-gray-700">{item}</span></div>))}</div></section>
+                )}
+              </>
+            )}
+
+            {activeTab === "itinerary" && (
+              <section><h2 className="text-2xl font-bold mb-6">Daily Itinerary</h2>
+                {packageData.itinerary?.length > 0 ? (
+                  <div className="space-y-4">{packageData.itinerary.map((day: any, i: number) => (<div key={i} className="bg-white rounded-xl shadow-md p-6"><div className="flex items-center gap-4 mb-3"><div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">{day.day || i + 1}</div><h3 className="text-lg font-semibold">{day.title || `Day ${day.day || i + 1}`}</h3></div><p className="text-gray-600 ml-16">{day.description || "No details available."}</p></div>))}</div>
+                ) : <p className="text-gray-600">No itinerary details available.</p>}
+              </section>
+            )}
+
+            {activeTab === "gallery" && (
+              <section><h2 className="text-2xl font-bold mb-6">Gallery</h2>
+                {images.length > 0 ? (
+                  <>
+                    <div className="relative h-[400px] rounded-xl overflow-hidden mb-4 bg-gray-200">
+                      <img src={images[currentImageIndex] || displayImage} alt="Gallery" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }} />
+                      {images.length > 1 && (
+                        <>
+                          <button onClick={() => setCurrentImageIndex((prev) => prev === 0 ? images.length - 1 : prev - 1)} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center"><FaChevronLeft className="w-5 h-5" /></button>
+                          <button onClick={() => setCurrentImageIndex((prev) => prev === images.length - 1 ? 0 : prev + 1)} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center"><FaChevronRight className="w-5 h-5" /></button>
+                        </>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {images.map((img: string, i: number) => (
+                        <button key={i} onClick={() => setCurrentImageIndex(i)} className={`relative h-20 rounded-lg overflow-hidden ${i === currentImageIndex ? "ring-2 ring-green-600" : ""}`}>
+                          <img src={resolveUrl(img)} alt="Thumbnail" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }} />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : <p className="text-gray-600">No gallery images available.</p>}
+              </section>
+            )}
+
+            {activeTab === "included" && (
+              <section><h2 className="text-2xl font-bold mb-6">What's Included</h2>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div><h3 className="text-xl font-semibold text-green-600 mb-4">Included</h3>
+                    {packageData.includes?.length > 0 ? (<ul className="space-y-3">{packageData.includes.map((item: string, i: number) => (<li key={i} className="flex gap-2"><FaCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" /><span className="text-gray-700">{item}</span></li>))}</ul>) : <p className="text-gray-500">No included items listed.</p>}
+                  </div>
+                  <div><h3 className="text-xl font-semibold text-red-500 mb-4">Not Included</h3>
+                    {packageData.excludes?.length > 0 ? (<ul className="space-y-3">{packageData.excludes.map((item: string, i: number) => (<li key={i} className="flex gap-2"><FaTimes className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" /><span className="text-gray-700">{item}</span></li>))}</ul>) : <p className="text-gray-500">No excluded items listed.</p>}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeTab === "reviews" && (
+              <section><h2 className="text-2xl font-bold mb-6">Reviews</h2>
+                {packageData.reviews?.length > 0 ? (
+                  <div className="space-y-4">{packageData.reviews.map((review: any) => (<div key={review.id} className="bg-white rounded-xl shadow-md p-6"><div className="flex items-start gap-4"><div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 flex items-center justify-center"><span className="text-gray-500 font-semibold text-lg">{review.user?.firstName?.[0] || "U"}</span></div><div className="flex-1"><div className="flex justify-between items-center mb-2"><h3 className="font-semibold">{review.user ? `${review.user.firstName} ${review.user.lastName}` : "Anonymous"}</h3><span className="text-sm text-gray-500">{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "N/A"}</span></div><div className="mb-2">{renderStars(review.rating || 0)}</div><p className="text-gray-600">{review.comment || "No comment."}</p></div></div></div>))}</div>
+                ) : <p className="text-gray-600">No reviews yet.</p>}
+              </section>
+            )}
+
+            {activeTab === "weather" && (
+              <section>
+                <h2 className="text-2xl font-bold mb-6">Weather Forecast</h2>
+                {weatherLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#008A1E] mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading weather data...</p>
+                  </div>
+                ) : weatherData?.forecast?.length > 0 ? (
+                  <>
+                    {weatherData.city && (
+                      <p className="text-gray-500 mb-4 text-sm">
+                        Weather for{" "}
+                        <span className="font-medium">
+                          {weatherData.city}{weatherData.country ? `, ${weatherData.country}` : ""}
+                        </span>
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {weatherData.forecast.slice(0, 4).map((day: any, i: number) => (
+                        <div key={i} className="bg-white rounded-lg shadow p-3 text-center">
+                          <p className="font-medium mb-2 text-sm text-gray-600">
+                            {day.date
+                              ? new Date(day.date).toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : `Day ${i + 1}`}
+                          </p>
+                          {getWeatherIcon(day.description || "")}
+                          <p className="text-lg font-semibold">
+                            {day.temp !== undefined ? `${Math.round(day.temp)}°C` : "—"}
+                          </p>
+                          <p className="text-xs text-gray-500 capitalize">{day.description || "N/A"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : weatherData?.error ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                    <FaCloud className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-700 font-medium">Weather data temporarily unavailable</p>
+                    <p className="text-gray-500 text-sm mt-1">
+                      The weather service could not be reached. Please try again later.
+                    </p>
+                  </div>
+                ) : weatherData !== null ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+                    <FaMapMarkerAlt className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+                    <p className="text-amber-800 font-medium">No forecast data for this location</p>
+                    <p className="text-amber-600 text-sm mt-1">
+                      The package location is not recognised by the weather service.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                    <FaCloud className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-700 font-medium">Weather unavailable</p>
+                    <p className="text-gray-500 text-sm mt-1">
+                      Could not load weather data. Please try again later.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
+              <div className="mb-4"><span className="text-3xl font-bold">{(packageData.price || 0).toLocaleString()} Rs</span><span className="text-gray-500 ml-2">/ person</span></div>
+              <div className="border-y border-gray-200 py-4 mb-4"><div className="flex justify-between"><span className="text-gray-600">Duration</span><span className="font-medium">{packageData.duration} Days</span></div></div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Travelers</label>
+                <div className="flex items-center justify-between border border-gray-300 rounded-lg p-2">
+                  <button onClick={() => handleTravelerChange("decrease")} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"><FaMinus className="w-3 h-3" /></button>
+                  <span className="font-medium">{travelers} {travelers === 1 ? "Person" : "People"}</span>
+                  <button onClick={() => handleTravelerChange("increase")} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"><FaPlus className="w-3 h-3" /></button>
+                </div>
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm"><span className="text-gray-600">{(packageData.price || 0).toLocaleString()} Rs × {travelers}</span><span className="font-medium">{totalPrice.toLocaleString()} Rs</span></div>
+                <div className="flex justify-between text-lg font-bold pt-2 border-t"><span>Total</span><span className="text-green-600">{totalPrice.toLocaleString()} Rs</span></div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-3 mb-4 flex items-start gap-2"><FaShieldAlt className="w-4 h-4 text-blue-600 mt-0.5" /><p className="text-xs text-blue-800"><strong>Secure Booking:</strong> Payment held by VoyageX until trip completion. Full refund if cancelled 48h before start.</p></div>
+              <button onClick={handleBookNow} className="w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"><FaLock className="w-4 h-4" /> Book Now - Pay Advance</button>
+              <p className="text-xs text-gray-500 text-center mt-3">By booking, you agree to our <Link href="/" className="text-[#008A1E] hover:underline">Terms</Link></p>
             </div>
+
+            {(packageData.agencies || packageData.guides) && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-xl font-semibold mb-3">{packageData.agencies ? "About Agency" : "About Guide"}</h3>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    {packageData.agencies?.logo ? <img src={resolveUrl(packageData.agencies.logo)} alt="" className="w-12 h-12 object-cover" /> : <span className="text-gray-500 font-semibold">{(packageData.agencies?.name?.[0] || packageData.guides?.users?.firstName?.[0] || "V")}</span>}
+                  </div>
+                  <div><h4 className="font-semibold">{packageData.agencies?.name || getAuthorName()}</h4><div className="flex items-center gap-1">{renderStars(packageData.agencies?.rating || packageData.guides?.rating || 4.5)}</div></div>
+                </div>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-3">{packageData.agencies?.description || packageData.guides?.bio || "No description available."}</p>
+                <div className="flex gap-3">
+                  <button onClick={() => router.push(packageData.agencies ? `/agency/${packageData.agencies.slug}` : `/guide/${packageData.guides?.slug}`)} className="flex-1 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">View Details</button>
+                  <button onClick={async () => {
+                    const recipientId = packageData.agencies?.userId || packageData.guides?.userId;
+                    if (!recipientId) return;
+                    try {
+                      const resp = await messagesApi.createConversation({ recipientId });
+                      const result = resp.data;
+                      if (result.success && result.data?.id) {
+                        router.push(`/message/${result.data.id}`);
+                      }
+                    } catch { router.push("/message"); }
+                  }} className="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">Message</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#008a1e] text-white pt-12 pb-8 mt-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Brand Section */}
-            <div>
-              <div className="text-2xl font-bold text-white mb-4">VoyageX</div>
-              <p className="text-gray-200 mb-6 text-sm leading-relaxed">
-                Lorem ipsum dolor sit amet consectetur. Tincidunt bibendum mauris
-                ultricies eu lacus. Nulla tincidunt diam risus nullam euismod lore
-              </p>
-              <div className="flex gap-3">
-                <div className="w-12 h-12 bg-[#006816] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#005a14] transition-colors">
-                  <FaTwitter className="w-5 h-5" />
-                </div>
-                <div className="w-12 h-12 bg-[#006816] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#005a14] transition-colors">
-                  <FaFacebookF className="w-5 h-5" />
-                </div>
-                <div className="w-12 h-12 bg-[#006816] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#005a14] transition-colors">
-                  <FaInstagram className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
-              <ul className="space-y-2">
-                {["Home", "About", "Packages", "Destination", "Contact"].map(
-                  (item) => (
-                    <li
-                      key={item}
-                      className="text-gray-200 hover:text-white cursor-pointer transition-colors"
-                    >
-                      {item}
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            {/* Help Center */}
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Help Center</h3>
-              <ul className="space-y-2">
-                {[
-                  "Terms & Services",
-                  "Privacy",
-                  "Cancelation Policy",
-                  "Report",
-                  "Support Team",
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="text-gray-200 hover:text-white cursor-pointer transition-colors"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Newsletter */}
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Now Here ?</h3>
-              <p className="text-gray-200 mb-4 text-sm">
-                Subscribe to get special offers and travel tips
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className="w-full px-4 py-3 rounded-2xl border-none outline-none text-gray-800 text-sm"
-                />
-                <button className="w-full px-4 py-3 bg-[#D6FFDF] text-gray-800 rounded-2xl font-medium hover:bg-white transition-colors">
-                  Sign Up
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
-}
+};
+
+export default PackageDetailPage;

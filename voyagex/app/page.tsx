@@ -1,11 +1,12 @@
-import AboutSection from "@/Components/about_section";
-import AgenciesSection from "@/Components/agencies_section";
-import ExploreSection from "@/Components/explore_section";
-import Footer from "@/Components/footer";
-import GuidesSection from "@/Components/guide_section";
-import Hero from "@/Components/hero";
-import PackagesSection from "@/Components/package_section";
-import TestimonialSection from "@/Components/testimonial";
+import AboutSection from "@/components/aboutsection";
+import AgenciesSection from "@/components/agenciessection";
+import Footer from "@/components/footer";
+import GuidesSection from "@/components/guidesection";
+import Hero from "@/components/hero";
+import PackagesSection from "@/components/package_section";
+import TestimonialSection from "@/components/testimonial";
+import ExploreSection from "@/components/exploresection";
+
 
 
 

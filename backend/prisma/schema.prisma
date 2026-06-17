@@ -1,0 +1,690 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  TRAVELER
+  GUIDE
+  AGENCY
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  AWAITING_TRAVELER_CONFIRMATION
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_GUIDE_WINS
+  RESOLVED_TRAVELER_WINS
+  RESOLVED_PARTIAL
+}
+
+enum BookingType {
+  GUIDE
+  PACKAGE
+}
+
+enum PricingModel {
+  PER_DAY
+  PER_PERSON
+}
+
+// ============================================
+// PAYMENT ENUMS — exactly four methods, nothing more
+// BANNED: CASH, MANUAL, VOYAGEX must never appear here
+// ============================================
+
+enum PaymentMethod {
+  EASYPAISA
+  JAZZCASH
+  CARD
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING          // initiated, not yet confirmed by gateway
+  PENDING_REVIEW   // bank transfer or card proof submitted, awaiting admin review
+  HELD             // gateway confirmed, funds held in escrow
+  CONFIRMED        // webhook received, payment verified by gateway
+  RELEASED         // escrow released to guide/agency after trip completion
+  PARTIALLY_RELEASED // partial release after disputed booking resolution
+  REFUNDED         // full refund issued
+  FAILED           // payment failed or rejected
+  CANCELLED        // payment cancelled (e.g. booking abandoned)
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+// Status for agency_subscription_payments rows specifically
+enum SubscriptionPaymentStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ReleaseSource {
+  TRAVELER_CONFIRMATION
+  AUTO_RELEASE
+  ADMIN_OVERRIDE
+}
+
+// ============================================
+// INTERNATIONAL BOOKING (formerly ManualBookingStatus)
+// The concept "manual booking" has been renamed to
+// "international booking" throughout the codebase.
+// Payment method for international bookings: BANK_TRANSFER.
+// ============================================
+
+enum InternationalBookingStatus {
+  PENDING_REVIEW     // inquiry received, admin notified
+  AWAITING_PAYMENT   // admin assigned WhatsApp/bank details
+  PAYMENT_RECEIVED   // admin confirmed payment from traveler
+  GUIDE_ASSIGNED     // guide assigned to the booking
+  IN_PROGRESS        // tour is active
+  COMPLETED          // tour completed
+  CANCELLED          // booking cancelled
+}
+
+enum DocumentType {
+  CNIC_FRONT
+  CNIC_BACK
+  RECOMMENDATION_LETTER
+  NOC
+  CERTIFICATE
+  BUSINESS_LICENSE
+  OTHER
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Region {
+  GILGIT_BALTISTAN
+  KHYBER_PAKHTUNKHWA
+  AZAD_KASHMIR
+  PUNJAB
+  SINDH
+  BALOCHISTAN
+  ISLAMABAD
+  OTHER
+  HUNZA
+  SKARDU
+  GILGIT
+  NAGAR
+  GHIZER
+  SWAT
+  KALAM
+  CHITRAL
+  NARAN
+  KAGHAN
+  MURREE
+  ABBOTTABAD
+  NEELUM_VALLEY
+  MUZAFFARABAD
+  RAWALAKOT
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_COMPLETED
+  NEW_MESSAGE
+  NEW_REVIEW
+  ACCOUNT_VERIFIED
+  GENERAL
+  PAYMENT_RECEIVED
+  PAYMENT_RELEASED
+  PAYMENT_PROOF_SUBMITTED
+  PAYMENT_PROOF_APPROVED
+  PAYMENT_PROOF_REJECTED
+  TOUR_STARTED
+  COMPLETION_REQUESTED
+  COMPLETION_CONFIRMED
+  DISPUTE_RAISED
+  DISPUTE_RESOLVED
+  AUTO_RELEASE_WARNING
+  PAYMENT_HELD
+  GUIDE_APPROVED
+  GUIDE_REJECTED
+  AGENCY_DOCUMENTS_APPROVED
+  AGENCY_SUBSCRIPTION_REMINDER
+  AGENCY_SUBSCRIPTION_EXPIRED
+  AGENCY_SUBSCRIPTION_CONFIRMED
+  INTERNATIONAL_BOOKING_CREATED
+  INTERNATIONAL_BOOKING_PAYMENT_RECEIVED
+  COMMISSION_DUE
+  COMMISSION_OVERDUE
+}
+
+enum ReportType {
+  GUIDE
+  AGENCY
+  PACKAGE
+  PAYMENT
+  SAFETY
+  SCAM
+}
+
+enum SubscriptionStatus {
+  FREE_TRIAL
+  PENDING_REVIEW
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  DELINQUENT
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model users {
+  id                          String                          @id
+  email                       String                          @unique
+  password                    String
+  role                        UserRole                        @default(TRAVELER)
+  firstName                   String
+  lastName                    String
+  phone                       String?
+  avatar                      String?
+  isEmailVerified             Boolean                         @default(false)
+  isActive                    Boolean                         @default(true)
+  createdAt                   DateTime                        @default(now())
+  updatedAt                   DateTime
+  agencies                    agencies?
+  bookings                    bookings[]
+  disputes                    disputes[]
+  guides                      guides?
+  messages                    messages[]
+  notifications               notifications[]
+  otps                        otps[]
+  payments                    payments[]
+  refresh_tokens              refresh_tokens[]
+  reports                     reports[]
+  reviews                     reviews[]
+  verification_documents      verification_documents[]
+  wishlists                   wishlists[]
+  conversations               conversations[]                 @relation("ConversationParticipants")
+  agencySubscriptionPayments  agency_subscription_payments[]
+  internationalBookingAssignments international_booking_assignments[]
+  refundsInitiated            refunds[]
+}
+
+model agencies {
+  id                      String                       @id
+  userId                  String                       @unique
+  slug                    String                       @unique
+  name                    String
+  description             String?
+  logo                    String?
+  coverImage              String?
+  galleryImages           String[]                     @default([])
+  address                 String?
+  city                    String?
+  country                 String?
+  website                 String?
+  isVerified              Boolean                      @default(false)
+  rating                  Float                        @default(0)
+  totalReviews            Int                          @default(0)
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime
+  region                  Region?
+
+  // Approval & Subscription Fields
+  adminApproved           Boolean                      @default(false)
+  approvalDate            DateTime?
+  approvedBy              String?
+  subscriptionStatus      SubscriptionStatus           @default(FREE_TRIAL)
+  subscriptionStartDate   DateTime?
+  subscriptionEndDate     DateTime?
+  freePeriodEndsAt        DateTime?
+  lastReminderSentAt      DateTime?
+
+  // Commission system planned for future phase. Do not activate.
+  commissionRate          Int                          @default(5)
+
+  // Bank Details for Direct Payments (admin reference only)
+  bankAccountNumber       String?
+  bankName                String?
+  accountHolderName       String?
+
+  users                   users                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packages                packages[]
+  reviews                 reviews[]
+  subscriptionPayments    agency_subscription_payments[]
+  // Commission system planned for future phase. Do not activate.
+  commissionPayments      agency_commission_payments[]
+}
+
+model guides {
+  id                  String     @id
+  userId              String     @unique
+  slug                String     @unique
+  bio                 String?
+  languages           String[]
+  specialities        String[]
+  experience          Int        @default(0)
+  pricePerDay         Float?
+  location            String?
+  coverImage          String?
+  destinationImages   String[]   @default([])
+  isVerified          Boolean    @default(false)
+  rating              Float      @default(0)
+  totalReviews        Int        @default(0)
+  isAvailable         Boolean    @default(true)
+  availableFrom       DateTime?
+  availableUntil      DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime
+  region              Region?
+
+  // Approval & Commission Fields
+  adminApproved       Boolean    @default(false)
+  approvalDate        DateTime?
+  approvedBy          String?
+  freePeriodEndsAt    DateTime?
+  // Commission system planned for future phase. Do not activate.
+  commissionRate      Int        @default(15)
+
+  // Payout destination (required before real payouts can be made)
+  bankAccountNumber   String?
+  bankName            String?
+  accountHolderName   String?
+
+  users               users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packages            packages[]
+  reviews             reviews[]
+}
+
+model bookings {
+  id                            String                        @id
+  userId                        String
+  packageId                     String
+  status                        BookingStatus                 @default(PENDING)
+  startDate                     DateTime
+  endDate                       DateTime
+  groupSize                     Int                           @default(1)
+  totalPrice                    Float
+  notes                         String?
+  pricingModel                  PricingModel                  @default(PER_PERSON)
+  bookingType                   BookingType                   @default(PACKAGE)
+  createdAt                     DateTime                      @default(now())
+  updatedAt                     DateTime
+
+  // Two-sided confirmation fields
+  guideConfirmedAt              DateTime?
+  travelerConfirmedAt           DateTime?
+  disputedAt                    DateTime?
+  disputeReason                 String?
+  adminResolvedAt               DateTime?
+  adminDecision                 String?
+  autoReleaseAt                 DateTime?
+
+  // Payment & Booking Classification
+  // Populated on payment initiation — must never remain null after payment
+  paymentMethod                 PaymentMethod?
+  isInternational               Boolean                       @default(false)
+
+  // Commission system planned for future phase. Do not activate.
+  commissionAmount              Float                         @default(0)
+  agencyPayoutAmount            Float?
+
+  // International booking tracking (renamed from manualBooking*)
+  internationalHandledBy        String?
+  whatsappConversationId        String?
+  internationalBookingStatus    InternationalBookingStatus?
+
+  packages                      packages                      @relation(fields: [packageId], references: [id])
+  users                         users                         @relation(fields: [userId], references: [id])
+  payments                      payments?
+  reviews                       reviews?
+  disputes                      disputes?
+  internationalAssignments      international_booking_assignments[]
+  // Commission system planned for future phase. Do not activate.
+  agencyCommissionPayment       agency_commission_payments?
+  refunds                       refunds[]
+}
+
+model disputes {
+  id               String         @id
+  bookingId        String         @unique
+  raisedBy         String
+  reason           String
+  description      String?
+  status           DisputeStatus  @default(OPEN)
+  adminNote        String?
+  resolvedBy       String?
+  resolvedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime
+  bookings         bookings       @relation(fields: [bookingId], references: [id])
+  users            users          @relation(fields: [raisedBy], references: [id])
+}
+
+model payments {
+  id                      String          @id
+  bookingId               String          @unique
+  userId                  String
+  amount                  Float
+  currency                String          @default("PKR")
+  method                  PaymentMethod
+  status                  PaymentStatus   @default(PENDING)
+
+  // VoyageX-generated local reference (e.g. VX-20260614-XXXX)
+  transactionId           String?
+
+  // Reference ID issued by the payment gateway after processing.
+  // EasyPaisa: Order ID  |  JazzCash: PP_TxnRefNo  |
+  // Card: PaymentIntent ID  |  Bank Transfer: bank ref number
+  // Required for refunds, receipts, dispute cross-reference.
+  providerTransactionId   String?
+
+  // Bank Transfer / International: URL of uploaded proof screenshot.
+  // Admin reviews this image before approving the payment.
+  proofUrl                String?
+
+  // Card (sandbox): token reference. In production: gateway-issued token.
+  // Raw card data (PAN, CVV, expiry) must NEVER be stored here.
+  cardToken               String?
+
+  // Platform fee and net payout — populated on escrow release.
+  // Commission system planned for future phase. Do not activate.
+  platformFee             Float?
+  netAmount               Float?
+
+  // Escrow hold deadline: trip end date + 7-day grace period.
+  // Populated on payment creation. Escrow scheduler reads this.
+  heldUntil               DateTime?
+
+  releasedAt              DateTime?
+  releasedBy              String?
+  releaseSource           ReleaseSource?
+  payoutAmount            Float?
+  refundedAt              DateTime?
+  metadata                Json?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime
+  bookings                bookings        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  users                   users           @relation(fields: [userId], references: [id])
+  refunds                 refunds[]
+}
+
+// ============================================
+// REFUNDS
+// ============================================
+
+model refunds {
+  id              String       @id
+  bookingId       String
+  paymentId       String
+  amount          Float
+  currency        String       @default("PKR")
+  reason          String
+  status          RefundStatus @default(PENDING)
+  initiatedById   String
+
+  // Gateway refund reference — populated on real gateway refund.
+  // In sandbox: set to 'sandbox_refund_' + id.
+  // Production: call provider.initiateRefund(providerTransactionId, amount)
+  providerRefundId String?
+
+  processedAt     DateTime?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+  bookings        bookings     @relation(fields: [bookingId], references: [id])
+  payments        payments     @relation(fields: [paymentId], references: [id])
+  initiatedBy     users        @relation(fields: [initiatedById], references: [id])
+}
+
+// ============================================
+// AGENCY SUBSCRIPTION PAYMENTS
+// Amount is always PLATFORM_CONFIG.agencySubscriptionAmount (Rs 10,000).
+// Never trust the submitted amount — derive from config at runtime.
+// ============================================
+
+model agency_subscription_payments {
+  id              String                    @id
+  agencyId        String
+  amount          Float
+  paymentDate     DateTime                  @default(now())
+  paymentMethod   PaymentMethod
+  transactionId   String?
+  // Proof image URL — required for BANK_TRANSFER and CARD methods.
+  proofUrl        String?
+  status          SubscriptionPaymentStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  periodStart     DateTime
+  periodEnd       DateTime
+  createdAt       DateTime                  @default(now())
+  agencies        agencies                  @relation(fields: [agencyId], references: [id])
+  users           users?                    @relation(fields: [userId], references: [id])
+  userId          String?
+}
+
+// Commission system planned for future phase. Do not activate.
+model agency_commission_payments {
+  id            String           @id
+  agencyId      String
+  bookingId     String           @unique
+  amount        Float
+  dueDate       DateTime
+  paidAt        DateTime?
+  status        CommissionStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime
+  agencies      agencies         @relation(fields: [agencyId], references: [id])
+  bookings      bookings         @relation(fields: [bookingId], references: [id])
+}
+
+// ============================================
+// INTERNATIONAL BOOKING ASSIGNMENTS
+// Renamed from manual_booking_assignments.
+// Tracks admin assignment of guides to international bookings.
+// ============================================
+
+model international_booking_assignments {
+  id            String           @id
+  bookingId     String
+  assignedBy    String
+  assignedTo    String?
+  whatsappId    String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime
+  bookings      bookings         @relation(fields: [bookingId], references: [id])
+  users         users            @relation(fields: [assignedBy], references: [id])
+}
+
+model destinations {
+  id          String     @id
+  slug        String     @unique
+  name        String
+  country     String
+  city        String
+  description String?
+  image       String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  region      Region?
+  packages    packages[]
+}
+
+model packages {
+  id            String       @id
+  slug          String       @unique
+  title         String
+  description   String
+  price         Float
+  duration      Int
+  maxGroupSize  Int          @default(10)
+  images        String[]
+  includes      String[]
+  excludes      String[]
+  itinerary     Json?
+  isActive      Boolean      @default(true)
+  rating        Float        @default(0)
+  totalReviews  Int          @default(0)
+  pricingModel  PricingModel @default(PER_PERSON)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  destinationId String
+  guideId       String?
+  agencyId      String?
+  bookings      bookings[]
+  agencies      agencies?    @relation(fields: [agencyId], references: [id])
+  destinations  destinations @relation(fields: [destinationId], references: [id])
+  guides        guides?      @relation(fields: [guideId], references: [id])
+  reviews       reviews[]
+  wishlists     wishlists[]
+}
+
+model conversations {
+  id        String     @id
+  createdAt DateTime   @default(now())
+  updatedAt DateTime
+  messages  messages[]
+  users     users[]    @relation("ConversationParticipants")
+}
+
+model messages {
+  id             String        @id
+  conversationId String
+  senderId       String
+  content        String
+  isRead         Boolean       @default(false)
+  isFlagged      Boolean       @default(false)
+  flagReason     String?
+  createdAt      DateTime      @default(now())
+  conversations  conversations @relation(fields: [conversationId], references: [id])
+  users          users         @relation(fields: [senderId], references: [id])
+}
+
+model notifications {
+  id        String           @id
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+  users     users            @relation(fields: [userId], references: [id])
+}
+
+model otps {
+  id        String   @id
+  userId    String
+  code      String
+  purpose   String?
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model refresh_tokens {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model reports {
+  id          String       @id
+  userId      String
+  type        ReportType
+  targetId    String
+  reason      String
+  description String?
+  status      ReportStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  users       users        @relation(fields: [userId], references: [id])
+}
+
+model reviews {
+  id        String    @id
+  userId    String
+  packageId String
+  bookingId String    @unique
+  guideId   String?
+  agencyId  String?
+  rating    Int
+  comment   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  agencies  agencies? @relation(fields: [agencyId], references: [id])
+  bookings  bookings  @relation(fields: [bookingId], references: [id])
+  guides    guides?   @relation(fields: [guideId], references: [id])
+  packages  packages  @relation(fields: [packageId], references: [id])
+  users     users     @relation(fields: [userId], references: [id])
+}
+
+model verification_documents {
+  id         String             @id
+  userId     String
+  type       DocumentType
+  fileUrl    String
+  fileKey    String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  status     VerificationStatus @default(PENDING)
+  adminNote  String?
+  reviewedAt DateTime?
+  reviewedBy String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime
+  users      users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model wishlists {
+  id        String   @id
+  userId    String
+  packageId String
+  createdAt DateTime @default(now())
+  packages  packages @relation(fields: [packageId], references: [id])
+  users     users    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, packageId])
+}

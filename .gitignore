@@ -1,0 +1,44 @@
+# ─── Dependencies ───────────────────────────────────────────
+**/node_modules/
+**/.pnp
+**/.pnp.*
+
+# ─── Build outputs ──────────────────────────────────────────
+**/dist/
+**/build/
+voyagex/.next/
+voyagex/out/
+
+# ─── Environment / Secrets ──────────────────────────────────
+.env
+.env.*
+**/.env
+**/.env.*
+
+# ─── Logs ───────────────────────────────────────────────────
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── TypeScript ─────────────────────────────────────────────
+*.tsbuildinfo
+voyagex/next-env.d.ts
+
+# ─── OS / Editor ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.pem
+.vercel
+.idea/
+.vscode/
+
+# ─── Testing ────────────────────────────────────────────────
+**/coverage/
+
+# ─── Prisma ─────────────────────────────────────────────────
+backend/prisma/dev.db
+backend/prisma/dev.db-journal

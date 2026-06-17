@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authApi } from "@/lib/api";
+import { saveAuth, getDashboardPath } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,17 +12,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [apiError, setApiError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     setErrors({ email: "", password: "" });
+    setApiError("");
 
     let hasError = false;
     const newErrors = { email: "", password: "" };
@@ -47,43 +48,47 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Login successful", { email, password });
-      router.push("/Guide");
-    } catch (error) {
-      setErrors({ ...errors, password: "Login failed. Try again." });
+      const response = await authApi.login({ email, password });
+      const { user, accessToken, refreshToken } = response.data.data;
+
+      saveAuth(accessToken, refreshToken, user);
+
+      const dashboardPath = getDashboardPath(user.role);
+      router.push(dashboardPath);
+
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message || "Invalid email or password";
+      setApiError(message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = () => {
-    router.push("/ResetPassword");
-  };
-
   return (
     <div className="relative w-full min-h-screen">
-      {/* MAIN BACKGROUND - Home.png (full screen) */}
-      <div 
+      <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/Home.png')" }}
       />
-
-      {/* TABLE/CARD BACKGROUND - green.png (741px container, START FROM LEFT) */}
-      <div 
+      <div
         className="relative w-full lg:w-[741px] min-h-screen flex flex-col justify-center items-start px-4 sm:px-6 py-8"
         style={{ backgroundImage: "url('/green.png')" }}
       >
-        {/* Form Container - Aligned to left */}
         <div className="w-full max-w-[400px] ml-0 lg:ml-8">
           <h1 className="text-white text-4xl sm:text-5xl lg:text-6xl font-bold text-left mb-8 sm:mb-10 lg:mb-12">
             Login
           </h1>
 
+          {apiError && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-200 rounded-lg text-sm">
+              {apiError}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-5 sm:space-y-6">
-            {/* Email Field */}
             <div className="space-y-2">
               <label className="text-white text-sm sm:text-base font-medium block text-left">
                 Email
@@ -94,16 +99,19 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className={`w-full h-12 sm:h-14 px-4 rounded-2xl bg-white text-gray-900 placeholder-gray-400 outline-none ${
-                  errors.email ? "ring-2 ring-red-500" : "focus:ring-2 focus:ring-[#008A1E]"
+                  errors.email
+                    ? "ring-2 ring-red-500"
+                    : "focus:ring-2 focus:ring-[#008A1E]"
                 }`}
                 disabled={isLoading}
               />
               {errors.email && (
-                <p className="text-red-300 text-xs sm:text-sm text-left">{errors.email}</p>
+                <p className="text-red-300 text-xs sm:text-sm text-left">
+                  {errors.email}
+                </p>
               )}
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-white text-sm sm:text-base font-medium">
@@ -111,13 +119,12 @@ export default function LoginPage() {
                 </label>
                 <button
                   type="button"
-                  onClick={handleForgotPassword}
+                  onClick={() => router.push("/reset-password")}
                   className="text-white text-xs sm:text-sm hover:underline"
                 >
                   Forgot Password?
                 </button>
               </div>
-              
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -125,24 +132,27 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   className={`w-full h-12 sm:h-14 px-4 rounded-2xl bg-white text-gray-900 placeholder-gray-400 outline-none ${
-                    errors.password ? "ring-2 ring-red-500" : "focus:ring-2 focus:ring-[#008A1E]"
+                    errors.password
+                      ? "ring-2 ring-red-500"
+                      : "focus:ring-2 focus:ring-[#008A1E]"
                   }`}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm font-medium"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-red-300 text-xs sm:text-sm text-left">{errors.password}</p>
+                <p className="text-red-300 text-xs sm:text-sm text-left">
+                  {errors.password}
+                </p>
               )}
             </div>
 
-            {/* Login Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -152,10 +162,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Sign Up Link */}
           <p className="mt-6 sm:mt-8 text-left text-white text-sm sm:text-base">
             Don't have an account?{" "}
-            <Link href="/Register" className="font-semibold hover:underline">
+            <Link href="/register" className="font-semibold hover:underline">
               Sign Up
             </Link>
           </p>
