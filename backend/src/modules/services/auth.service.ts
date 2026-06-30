@@ -17,6 +17,7 @@ import {
   RegisterGuideDto,
   RegisterTravelerDto
 } from '../dto/auth.dto';
+import { AppConfigService } from '../../config/app-config.service';
 import { EmailService } from './email.service';
 import { QueueService } from './queue.service';
 
@@ -27,9 +28,17 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly appConfig: AppConfigService,
     private readonly emailService: EmailService,
     private readonly queueService: QueueService
   ) {}
+
+  private durationToMs(value: string): number {
+    if (value.endsWith('d')) return Number(value.slice(0, -1)) * 24 * 60 * 60 * 1000;
+    if (value.endsWith('h')) return Number(value.slice(0, -1)) * 60 * 60 * 1000;
+    if (value.endsWith('m')) return Number(value.slice(0, -1)) * 60 * 1000;
+    return 7 * 24 * 60 * 60 * 1000;
+  }
 
   private uid(): string {
     return randomUUID();
@@ -62,20 +71,23 @@ export class AuthService {
     const accessToken = await this.jwt.signAsync(
       { id: user.id, role: user.role, email: user.email },
       {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: '15m'
+        secret: this.appConfig.jwtSecret,
+        expiresIn: this.appConfig.jwtExpiresIn,
       }
     );
     const refreshToken = await this.jwt.signAsync(
       { sub: user.id, role: user.role },
-      { secret: process.env.JWT_REFRESH_SECRET, expiresIn: '7d' }
+      {
+        secret: this.appConfig.jwtRefreshSecret,
+        expiresIn: this.appConfig.jwtRefreshExpiresIn,
+      }
     );
     await this.prisma.refresh_tokens.create({
       data: {
         id: this.uid(),
         userId: user.id,
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + this.durationToMs(this.appConfig.jwtRefreshExpiresIn))
       }
     });
     return { accessToken, refreshToken };
@@ -354,7 +366,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
     const payload = this.jwt.verify(refreshToken, {
-      secret: process.env.JWT_REFRESH_SECRET
+      secret: this.appConfig.jwtRefreshSecret
     }) as { sub: string };
     const user = await this.prisma.users.findUniqueOrThrow({
       where: { id: payload.sub }

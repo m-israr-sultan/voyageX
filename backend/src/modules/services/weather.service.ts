@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { AppConfigService } from '../../config/app-config.service';
 
 type CacheEntry = { expiresAt: number; payload: unknown };
 type OpenWeatherCurrent = {
@@ -16,10 +17,18 @@ type OpenWeatherForecast = {
 @Injectable()
 export class WeatherService {
   private readonly cache = new Map<string, CacheEntry>();
-  private readonly apiKey = process.env.OPENWEATHER_API_KEY ?? '';
-  private readonly baseUrl = 'https://api.openweathermap.org/data/2.5';
   private readonly cacheTtlMs = 5 * 60 * 1000;
   private readonly logger = new Logger(WeatherService.name);
+
+  constructor(private readonly appConfig: AppConfigService) {}
+
+  private get apiKey(): string {
+    return this.appConfig.weatherApiKey;
+  }
+
+  private get baseUrl(): string {
+    return this.appConfig.weatherBaseUrl;
+  }
 
   private async fetchJson<T>(url: string, city: string): Promise<T> {
     const controller = new AbortController();
@@ -44,59 +53,66 @@ export class WeatherService {
     }
   }
 
-  private async withCache<T>(key: string, loader: () => Promise<T>): Promise<T> {
-    const existing = this.cache.get(key);
-    if (existing && existing.expiresAt > Date.now()) {
-      return existing.payload as T;
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt < Date.now()) {
+      this.cache.delete(key);
+      return null;
     }
-    const payload = await loader();
-    this.cache.set(key, { payload, expiresAt: Date.now() + this.cacheTtlMs });
+    return entry.payload as T;
+  }
+
+  private setCached(key: string, payload: unknown): void {
+    this.cache.set(key, { expiresAt: Date.now() + this.cacheTtlMs, payload });
+  }
+
+  async current(city: string) {
+    if (!this.apiKey) {
+      throw new HttpException('Weather API key not configured', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    const cacheKey = `current:${city.toLowerCase()}`;
+    const cached = this.getCached<unknown>(cacheKey);
+    if (cached) return cached;
+
+    const url = `${this.baseUrl}/weather?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric`;
+    const data = await this.fetchJson<OpenWeatherCurrent>(url, city);
+    const payload = {
+      city: data.name,
+      country: data.sys?.country ?? '',
+      temperature: data.main?.temp ?? null,
+      feelsLike: data.main?.feels_like ?? null,
+      humidity: data.main?.humidity ?? null,
+      windSpeed: data.wind?.speed ?? null,
+      description: data.weather?.[0]?.description ?? '',
+    };
+    this.setCached(cacheKey, payload);
     return payload;
   }
 
-  async current(city: string): Promise<unknown> {
-    if (!city?.trim()) {
-      this.logger.warn('[Weather] current() called with empty city');
-      throw new HttpException('City is required', HttpStatus.BAD_REQUEST);
+  async forecast(city: string) {
+    if (!this.apiKey) {
+      throw new HttpException('Weather API key not configured', HttpStatus.SERVICE_UNAVAILABLE);
     }
-    const key = `current:${city.toLowerCase()}`;
-    return this.withCache(key, async () => {
-      const data = await this.fetchJson<OpenWeatherCurrent>(
-        `${this.baseUrl}/weather?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric`,
-        city,
-      );
-      return {
-        city: data.name,
-        country: data.sys?.country,
-        temperature: data.main?.temp,
-        feelsLike: data.main?.feels_like,
-        humidity: data.main?.humidity,
-        windSpeed: data.wind?.speed,
-        description: data.weather?.[0]?.description
-      };
-    });
-  }
 
-  async forecast(city: string): Promise<unknown> {
-    if (!city?.trim()) {
-      this.logger.warn('[Weather] forecast() called with empty city');
-      throw new HttpException('City is required', HttpStatus.BAD_REQUEST);
-    }
-    const key = `forecast:${city.toLowerCase()}`;
-    return this.withCache(key, async () => {
-      const data = await this.fetchJson<OpenWeatherForecast>(
-        `${this.baseUrl}/forecast?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric`,
-        city,
-      );
-      return {
-        city: data.city?.name,
-        country: data.city?.country,
-        forecast: (data.list ?? []).slice(0, 8).map((x) => ({
-          date: x.dt_txt,
-          temp: x.main?.temp,
-          description: x.weather?.[0]?.description
-        }))
-      };
-    });
+    const cacheKey = `forecast:${city.toLowerCase()}`;
+    const cached = this.getCached<unknown>(cacheKey);
+    if (cached) return cached;
+
+    const url = `${this.baseUrl}/forecast?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric`;
+    const data = await this.fetchJson<OpenWeatherForecast>(url, city);
+    const payload = {
+      city: data.city?.name ?? city,
+      country: data.city?.country ?? '',
+      forecast:
+        data.list?.slice(0, 8).map((item) => ({
+          datetime: item.dt_txt ?? '',
+          temperature: item.main?.temp ?? null,
+          description: item.weather?.[0]?.description ?? '',
+        })) ?? [],
+    };
+    this.setCached(cacheKey, payload);
+    return payload;
   }
 }

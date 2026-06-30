@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from './auth.service';
+import { AppConfigService } from '../../config/app-config.service';
 import { EmailService } from './email.service';
 import { QueueService } from './queue.service';
 
@@ -13,6 +14,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: {} },
         { provide: EmailService, useValue: {} },
         { provide: QueueService, useValue: {} },
+        { provide: AppConfigService, useValue: { jwtSecret: 'test', jwtExpiresIn: '15m', jwtRefreshSecret: 'test-refresh', jwtRefreshExpiresIn: '7d' } },
         { provide: PrismaService, useValue: {} }
       ]
     }).compile();

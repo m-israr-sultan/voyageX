@@ -6,8 +6,9 @@ import {
   WebSocketServer
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { resolveCorsOrigin } from '../../config/cors.config';
 
-@WebSocketGateway({ namespace: '/messages', cors: { origin: true } })
+@WebSocketGateway({ namespace: '/messages', cors: { origin: resolveCorsOrigin(), credentials: true } })
 export class MessagesGateway {
   @WebSocketServer() server!: Server;
 

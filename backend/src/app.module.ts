@@ -2,7 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './modules/app.controller';
 import { AppService } from './modules/app.service';
@@ -45,15 +45,26 @@ import { WeatherService } from './modules/services/weather.service';
 import { MessagesGateway } from './modules/gateways/messages.gateway';
 import { NotificationsGateway } from './modules/gateways/notifications.gateway';
 import { PrismaModule } from './prisma/prisma.module';
+import { AppConfigModule } from './config/app-config.module';
+import { MailModule } from './config/mail.module';
 import { validateEnv } from './config/env.validation';
+import type { EnvConfig } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    AppConfigModule,
+    MailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: 'voyagex_access_secret',
-      signOptions: { expiresIn: '15m' }
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<EnvConfig, true>) => ({
+        secret: config.get('JWT_SECRET', { infer: true }),
+        signOptions: {
+          expiresIn: config.get('JWT_EXPIRES_IN', { infer: true }),
+        },
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule

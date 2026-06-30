@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
 import { static as serveStatic } from 'express';
 import { AppModule } from './app.module';
+import { AppConfigService } from './config/app-config.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
@@ -11,8 +12,13 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+  const appConfig = app.get(AppConfigService);
+
   app.setGlobalPrefix('api/v1');
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    origin: appConfig.getCorsOrigins(),
+    credentials: true,
+  });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(
@@ -31,7 +37,7 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(8000);
+  await app.listen(appConfig.port);
 }
 
 void bootstrap();
