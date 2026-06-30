@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Job, Queue, Worker } from 'bullmq';
+import { AppConfigService } from '../../config/app-config.service';
 import { EmailService } from './email.service';
 
 type OtpJob = { email: string; otp: string; purpose: string };
@@ -7,17 +8,29 @@ type OtpJob = { email: string; otp: string; purpose: string };
 @Injectable()
 export class QueueService implements OnModuleDestroy {
   private readonly logger = new Logger(QueueService.name);
-  private readonly connection = {
-    host: process.env.REDIS_HOST ?? '127.0.0.1',
-    port: Number(process.env.REDIS_PORT ?? 6379)
+  private readonly connection: {
+    host: string;
+    port: number;
+    password?: string;
+    tls?: Record<string, never>;
   };
-  private readonly otpQueue = new Queue<OtpJob>('otp', {
-    connection: this.connection,
-    defaultJobOptions: { attempts: 3, removeOnComplete: true, backoff: { type: 'exponential', delay: 1000 } }
-  });
+  private readonly otpQueue: Queue<OtpJob>;
   private readonly otpWorker: Worker<OtpJob>;
 
-  constructor(private readonly emailService: EmailService) {
+  constructor(
+    private readonly appConfig: AppConfigService,
+    private readonly emailService: EmailService,
+  ) {
+    this.connection = {
+      host: this.appConfig.redisHost,
+      port: this.appConfig.redisPort,
+      ...(this.appConfig.redisPassword && { password: this.appConfig.redisPassword }),
+      ...(this.appConfig.isProduction && { tls: {} }),
+    };
+    this.otpQueue = new Queue<OtpJob>('otp', {
+      connection: this.connection,
+      defaultJobOptions: { attempts: 3, removeOnComplete: true, backoff: { type: 'exponential', delay: 1000 } }
+    });
     this.otpWorker = new Worker<OtpJob>(
       'otp',
       async (job: Job<OtpJob>) => {
