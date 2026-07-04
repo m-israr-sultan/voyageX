@@ -10,11 +10,7 @@ export type EnvConfig = {
   REDIS_HOST: string;
   REDIS_PORT: number;
   REDIS_PASSWORD?: string;
-  MAIL_HOST: string;
-  MAIL_PORT: number;
-  MAIL_USER: string;
-  MAIL_PASS: string;
-  MAIL_SECURE: boolean;
+  BREVO_API_KEY: string;
   MAIL_FROM: string;
   WEATHER_API_KEY?: string;
   WEATHER_BASE_URL: string;
@@ -41,12 +37,6 @@ function readPort(value: unknown, fallback: number): number {
   return parsed;
 }
 
-function parseMailSecure(value: unknown): boolean {
-  if (typeof value === 'boolean') return value;
-  const normalized = String(value ?? '').trim().toLowerCase();
-  return normalized === 'true' || normalized === '1' || normalized === 'yes';
-}
-
 function assertNoConflict(
   canonical: unknown,
   legacy: unknown,
@@ -60,41 +50,6 @@ function assertNoConflict(
       `Duplicate configuration: ${canonicalName} and ${legacyName} conflict. Use ${canonicalName} only.`,
     );
   }
-}
-
-function requireMailVars(
-  config: Record<string, unknown>,
-  isProduction: boolean,
-): {
-  mailHost: string;
-  mailPort: number;
-  mailUser: string;
-  mailPass: string;
-  mailSecure: boolean;
-  mailFrom: string;
-} {
-  const mailHost = readString(config.MAIL_HOST);
-  const mailUser = readString(config.MAIL_USER);
-  const mailPass = readString(config.MAIL_PASS);
-  const mailFrom = readString(config.MAIL_FROM);
-  const mailPort = readPort(config.MAIL_PORT, 587);
-  const mailSecure = parseMailSecure(config.MAIL_SECURE);
-
-  if (isProduction) {
-    if (!mailHost) throw new Error('Missing required production environment variable: MAIL_HOST');
-    if (!mailUser) throw new Error('Missing required production environment variable: MAIL_USER');
-    if (!mailPass) throw new Error('Missing required production environment variable: MAIL_PASS');
-    if (!mailFrom) throw new Error('Missing required production environment variable: MAIL_FROM');
-  }
-
-  return {
-    mailHost: mailHost ?? '',
-    mailPort,
-    mailUser: mailUser ?? '',
-    mailPass: mailPass ?? '',
-    mailSecure,
-    mailFrom: mailFrom ?? '',
-  };
 }
 
 export const validateEnv = (config: Record<string, unknown>): EnvConfig => {
@@ -131,7 +86,13 @@ export const validateEnv = (config: Record<string, unknown>): EnvConfig => {
     throw new Error('Missing required production environment variable: FRONTEND_URL');
   }
 
-  const mail = requireMailVars(config, isProduction);
+  const brevoApiKey = readString(config.BREVO_API_KEY);
+  const mailFrom = readString(config.MAIL_FROM);
+
+  if (isProduction) {
+    if (!brevoApiKey) throw new Error('Missing required production environment variable: BREVO_API_KEY');
+    if (!mailFrom) throw new Error('Missing required production environment variable: MAIL_FROM');
+  }
 
   return {
     NODE_ENV: nodeEnv,
@@ -145,12 +106,8 @@ export const validateEnv = (config: Record<string, unknown>): EnvConfig => {
     REDIS_HOST: readString(config.REDIS_HOST) ?? '127.0.0.1',
     REDIS_PORT: readPort(config.REDIS_PORT, 6379),
     REDIS_PASSWORD: readString(config.REDIS_PASSWORD),
-    MAIL_HOST: mail.mailHost,
-    MAIL_PORT: mail.mailPort,
-    MAIL_USER: mail.mailUser,
-    MAIL_PASS: mail.mailPass,
-    MAIL_SECURE: mail.mailSecure,
-    MAIL_FROM: mail.mailFrom,
+    BREVO_API_KEY: brevoApiKey ?? '',
+    MAIL_FROM: mailFrom ?? '',
     WEATHER_API_KEY:
       readString(config.WEATHER_API_KEY) ?? readString(config.OPENWEATHER_API_KEY),
     WEATHER_BASE_URL:

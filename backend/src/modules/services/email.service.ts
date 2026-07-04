@@ -4,7 +4,6 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
 import { AppConfigService } from '../../config/app-config.service';
 import { buildOtpEmailContent } from '../../config/mail.templates';
 import { parseMailFromDisplayName } from '../../config/mail.util';
@@ -12,14 +11,14 @@ import { parseMailFromDisplayName } from '../../config/mail.util';
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+  private readonly brevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
 
   constructor(
-    private readonly mailer: MailerService,
     private readonly appConfig: AppConfigService,
   ) {
     if (!this.appConfig.isMailConfigured) {
       this.logger.warn(
-        'SMTP mail is not fully configured. Set MAIL_HOST, MAIL_USER, MAIL_PASS, and MAIL_FROM to send emails.',
+        'Mail is not fully configured. Set BREVO_API_KEY and MAIL_FROM to send emails.',
       );
     }
   }
@@ -28,7 +27,7 @@ export class EmailService {
     if (!this.appConfig.isMailConfigured) {
       if (!this.appConfig.isProduction) {
         this.logger.warn(
-          `[DEV] OTP email for ${purpose} to ${email} skipped (SMTP not configured)`,
+          `[DEV] OTP email for ${purpose} to ${email} skipped (mail not configured)`,
         );
       }
       throw new ServiceUnavailableException(
@@ -40,25 +39,47 @@ export class EmailService {
     const displayName = parseMailFromDisplayName(from);
     const { subject, html, text } = buildOtpEmailContent(otp, purpose, displayName);
 
+    // Parse "VoyageX <noreply@voyagextravel.com>" into name + email
+    const senderMatch = from.match(/^(.+?)\s*<(.+?)>$/);
+    const senderName = senderMatch ? senderMatch[1].trim() : displayName;
+    const senderEmail = senderMatch ? senderMatch[2].trim() : from;
+
+    const payload = {
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    };
+
     try {
-      await this.mailer.sendMail({
-        from,
-        to: email,
-        subject,
-        html,
-        text,
+      const response = await fetch(this.brevoApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': this.appConfig.brevoApiKey,
+        },
+        body: JSON.stringify(payload),
       });
 
-      this.logger.log(`OTP email sent to ${email} for ${purpose} via SMTP`);
-    } catch (error: unknown) {
-      const smtpError = error as {
-        code?: string;
-        response?: string;
-        message?: string;
-      };
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(
+          `Brevo API error for ${purpose} to ${email}: status=${response.status} body=${errorBody}`,
+        );
+        throw new InternalServerErrorException(
+          'Unable to send email at this time. Please try again later.',
+        );
+      }
 
+      this.logger.log(`OTP email sent to ${email} for ${purpose} via Brevo API`);
+    } catch (error: unknown) {
+      if (error instanceof InternalServerErrorException) throw error;
+      if (error instanceof ServiceUnavailableException) throw error;
+
+      const apiError = error as { message?: string };
       this.logger.error(
-        `SMTP send failed for ${purpose} to ${email}: code=${smtpError.code ?? 'unknown'} message=${smtpError.message ?? 'unknown'} response=${smtpError.response ?? 'none'}`,
+        `Brevo API call failed for ${purpose} to ${email}: ${apiError.message ?? 'unknown error'}`,
       );
 
       throw new InternalServerErrorException(

@@ -1,27 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { AppConfigService } from './app-config.service';
 
-@Module({
-  imports: [
-    MailerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (appConfig: AppConfigService) => ({
-        transport: {
-          host: appConfig.mailHost,
-          port: appConfig.mailPort,
-          secure: appConfig.mailSecure,
-          auth: {
-            user: appConfig.mailUser,
-            pass: appConfig.mailPass,
-          },
-        },
-        defaults: {
-          from: appConfig.mailFrom,
-        },
-      }),
-    }),
-  ],
-  exports: [MailerModule],
-})
+// Email is now sent via Brevo HTTP API directly in EmailService.
+// MailerModule (SMTP) is no longer used and has been removed.
+@Module({})
 export class MailModule {}

@@ -54,24 +54,8 @@ export class AppConfigService {
     return this.config.get('REDIS_PASSWORD', { infer: true });
   }
 
-  get mailHost(): string {
-    return this.config.get('MAIL_HOST', { infer: true });
-  }
-
-  get mailPort(): number {
-    return this.config.get('MAIL_PORT', { infer: true });
-  }
-
-  get mailUser(): string {
-    return this.config.get('MAIL_USER', { infer: true });
-  }
-
-  get mailPass(): string {
-    return this.config.get('MAIL_PASS', { infer: true });
-  }
-
-  get mailSecure(): boolean {
-    return this.config.get('MAIL_SECURE', { infer: true });
+  get brevoApiKey(): string {
+    return this.config.get('BREVO_API_KEY', { infer: true });
   }
 
   get mailFrom(): string {
@@ -79,9 +63,7 @@ export class AppConfigService {
   }
 
   get isMailConfigured(): boolean {
-    return Boolean(
-      this.mailHost && this.mailUser && this.mailPass && this.mailFrom,
-    );
+    return Boolean(this.brevoApiKey && this.mailFrom);
   }
 
   get weatherApiKey(): string {
