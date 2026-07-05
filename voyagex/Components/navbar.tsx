@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { FaBell, FaUserCircle, FaSearch } from "react-icons/fa";
+import { FaBell, FaUserCircle } from "react-icons/fa";
 import { notificationsApi, usersApi } from "../lib/api";
-import { getToken, clearAuth, isLoggedIn as checkLoggedIn, getDashboardPath } from "../lib/auth";
+import { clearAuth, isLoggedIn as checkLoggedIn, getDashboardPath } from "../lib/auth";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,12 +28,11 @@ const Navbar = () => {
     { name: "Packages", path: "/packages" },
   ];
 
+  // Login only — Sign Up removed (early access, invite-only)
   const authItems = [
     { name: "Login", path: "/login" },
-    { name: "Sign Up", path: "/register", isButton: true },
   ];
 
-  // Check login status from token
   useEffect(() => {
     const loggedInStatus = checkLoggedIn();
     setLoggedIn(loggedInStatus);
@@ -43,7 +42,6 @@ const Navbar = () => {
     }
   }, []);
 
-  // Fetch user profile from backend
   const fetchUserProfile = async () => {
     try {
       const response = await usersApi.getProfile();
@@ -51,11 +49,11 @@ const Navbar = () => {
       if (result.success && result.data) {
         const userData = result.data;
         setUser(userData);
-        const name = userData.firstName && userData.lastName 
-          ? `${userData.firstName} ${userData.lastName}`
-          : userData.email?.split("@")[0] || "User";
+        const name =
+          userData.firstName && userData.lastName
+            ? `${userData.firstName} ${userData.lastName}`
+            : userData.email?.split("@")[0] || "User";
         setUserName(name);
-        console.log("User avatar URL:", userData.avatar); // Debug log
         setUserAvatar(userData.avatar || "");
       }
     } catch (error: any) {
@@ -90,10 +88,12 @@ const Navbar = () => {
     }
   };
 
-  // Close notifications on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
         setShowNotifications(false);
       }
     };
@@ -144,13 +144,18 @@ const Navbar = () => {
         </Link>
       </div>
 
+      {/* Desktop Nav Links */}
       <div className="hidden lg:flex flex-1 justify-center">
         <ul className="flex flex-row justify-center items-center gap-6 lg:gap-8 xl:gap-10 list-none">
           {navItems.map((item) => (
             <li key={item.name}>
               <Link
                 href={item.path}
-                className={`${pathname === item.path ? "text-green-600 font-semibold" : "text-gray-800 hover:text-green-600"} cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base xl:text-lg`}
+                className={`${
+                  pathname === item.path
+                    ? "text-green-600 font-semibold"
+                    : "text-gray-800 hover:text-green-600"
+                } cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base xl:text-lg`}
               >
                 {item.name}
               </Link>
@@ -159,6 +164,7 @@ const Navbar = () => {
         </ul>
       </div>
 
+      {/* Desktop Auth / User Menu */}
       <div className="hidden lg:flex items-center gap-4 pr-4 sm:pr-6 lg:pr-8 xl:pr-10 2xl:pr-12">
         {loggedIn ? (
           <>
@@ -197,7 +203,9 @@ const Navbar = () => {
                       notifications.map((notif) => (
                         <div
                           key={notif.id}
-                          className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${!notif.read ? "bg-blue-50" : ""}`}
+                          className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
+                            !notif.read ? "bg-blue-50" : ""
+                          }`}
                         >
                           <p className="text-sm">
                             {notif.title || notif.message || notif.text}
@@ -214,6 +222,7 @@ const Navbar = () => {
                 </div>
               )}
             </div>
+
             {/* User Menu */}
             <div className="flex items-center gap-3">
               <Link
@@ -246,16 +255,24 @@ const Navbar = () => {
           </>
         ) : (
           <ul className="flex flex-row justify-center items-center gap-4 lg:gap-6 xl:gap-8 list-none">
-            {authItems.map((item) => (
-              <li key={item.name}>
-                <Link
-                  href={item.path}
-                  className={`${item.isButton ? "bg-green-600 text-white px-4 lg:px-6 py-2 rounded-full hover:bg-green-700 text-sm lg:text-base" : pathname === item.path ? "text-green-600 font-semibold" : "text-gray-800 hover:text-green-600"} cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base`}
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+            {/* Login only — Sign Up hidden during early access */}
+            <li>
+              <Link
+                href="/login"
+                className={`${
+                  pathname === "/login"
+                    ? "text-green-600 font-semibold"
+                    : "text-gray-800 hover:text-green-600"
+                } cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base`}
+              >
+                Login
+              </Link>
+            </li>
+            <li>
+              <span className="bg-gray-100 text-gray-500 px-4 lg:px-6 py-2 rounded-full text-sm lg:text-base font-medium cursor-default">
+                Early Access
+              </span>
+            </li>
           </ul>
         )}
       </div>
@@ -268,18 +285,25 @@ const Navbar = () => {
         >
           <div className="space-y-1.5">
             <span
-              className={`block w-6 h-0.5 bg-gray-700 transition-all ${isMenuOpen ? "rotate-45 translate-y-2" : ""}`}
+              className={`block w-6 h-0.5 bg-gray-700 transition-all ${
+                isMenuOpen ? "rotate-45 translate-y-2" : ""
+              }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-gray-700 transition-all ${isMenuOpen ? "opacity-0" : "opacity-100"}`}
+              className={`block w-6 h-0.5 bg-gray-700 transition-all ${
+                isMenuOpen ? "opacity-0" : "opacity-100"
+              }`}
             ></span>
             <span
-              className={`block w-6 h-0.5 bg-gray-700 transition-all ${isMenuOpen ? "-rotate-45 -translate-y-2" : ""}`}
+              className={`block w-6 h-0.5 bg-gray-700 transition-all ${
+                isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+              }`}
             ></span>
           </div>
         </button>
       </div>
 
+      {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="fixed top-20 left-0 right-0 bottom-0 bg-white lg:hidden z-50 overflow-y-auto">
           <div className="flex flex-col h-full">
@@ -289,7 +313,11 @@ const Navbar = () => {
                   <Link
                     key={item.name}
                     href={item.path}
-                    className={`${pathname === item.path ? "text-green-600 font-semibold bg-green-50" : "text-gray-800 hover:text-green-600 hover:bg-gray-50"} py-3 px-4 rounded-lg text-base`}
+                    className={`${
+                      pathname === item.path
+                        ? "text-green-600 font-semibold bg-green-50"
+                        : "text-gray-800 hover:text-green-600 hover:bg-gray-50"
+                    } py-3 px-4 rounded-lg text-base`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.name}
@@ -319,16 +347,23 @@ const Navbar = () => {
                     </button>
                   </>
                 ) : (
-                  authItems.map((item) => (
+                  <>
+                    {/* Login only on mobile — Sign Up hidden during early access */}
                     <Link
-                      key={item.name}
-                      href={item.path}
-                      className={`${item.isButton ? "bg-green-600 text-white text-center" : pathname === item.path ? "text-green-600 font-semibold bg-green-50" : "text-gray-800 hover:text-green-600 hover:bg-gray-50"} py-3 px-4 rounded-lg text-base`}
+                      href="/login"
+                      className={`${
+                        pathname === "/login"
+                          ? "text-green-600 font-semibold bg-green-50"
+                          : "text-gray-800 hover:text-green-600 hover:bg-gray-50"
+                      } py-3 px-4 rounded-lg text-base`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {item.name}
+                      Login
                     </Link>
-                  ))
+                    <div className="py-3 px-4 rounded-lg text-base bg-gray-100 text-gray-500 text-center">
+                      Early Access — Registration Invite Only
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -347,4 +382,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;
