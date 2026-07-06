@@ -48,10 +48,10 @@ const Footer = () => {
   ];
   const quickLinks = [
     { name: "Home", path: "/" },
-    { name: "About", path: "/" },
+    { name: "About", path: "/about" },
     { name: "Packages", path: "/packages" },
     { name: "Destination", path: "/destination" },
-    { name: "Contact", path: "/" },
+    { name: "Contact", path: "/contact" },
   ];
   const helpLinks = [
     { name: "Terms & Services", path: "/" },

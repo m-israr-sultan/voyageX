@@ -24,13 +24,15 @@ const Navbar = () => {
 
   const navItems = [
     { name: "Destinations", path: "/destination" },
-    { name: "Customize", path: "/customize" },
+    { name: "Team", path: "/about" },
     { name: "Packages", path: "/packages" },
+    // { name: "About", path: "/about" },
+    // { name: "Contact", path: "/contact" },
   ];
 
-  // Login only — Sign Up removed (early access, invite-only)
   const authItems = [
     { name: "Login", path: "/login" },
+    { name: "Sign Up", path: "/register", isButton: true },
   ];
 
   useEffect(() => {
@@ -71,15 +73,12 @@ const Navbar = () => {
         notificationsApi.getAll(),
         notificationsApi.getUnreadCount(),
       ]);
-
       const notifResult = notifRes.data;
       const countResult = countRes.data;
-
       if (notifResult.success && notifResult.data) {
         const items = notifResult.data.items || notifResult.data || [];
         setNotifications(items.slice(0, 5));
       }
-
       if (countResult.success && countResult.data) {
         setNotificationCount(countResult.data.count || 0);
       }
@@ -130,7 +129,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="flex flex-row justify-between items-center bg-white w-full h-20 mx-auto z-50 relative">
+    <nav className="flex flex-row justify-between items-center bg-white w-full h-20 mx-auto z-50 relative shadow-sm">
       <div className="pl-4 sm:pl-6 lg:pl-8 xl:pl-10 2xl:pl-12">
         <Link href="/" className="flex items-center">
           <Image
@@ -168,7 +167,6 @@ const Navbar = () => {
       <div className="hidden lg:flex items-center gap-4 pr-4 sm:pr-6 lg:pr-8 xl:pr-10 2xl:pr-12">
         {loggedIn ? (
           <>
-            {/* Notifications */}
             <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -223,7 +221,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* User Menu */}
             <div className="flex items-center gap-3">
               <Link
                 href={getDashboardLink()}
@@ -255,24 +252,22 @@ const Navbar = () => {
           </>
         ) : (
           <ul className="flex flex-row justify-center items-center gap-4 lg:gap-6 xl:gap-8 list-none">
-            {/* Login only — Sign Up hidden during early access */}
-            <li>
-              <Link
-                href="/login"
-                className={`${
-                  pathname === "/login"
-                    ? "text-green-600 font-semibold"
-                    : "text-gray-800 hover:text-green-600"
-                } cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base`}
-              >
-                Login
-              </Link>
-            </li>
-            <li>
-              <span className="bg-gray-100 text-gray-500 px-4 lg:px-6 py-2 rounded-full text-sm lg:text-base font-medium cursor-default">
-                Early Access
-              </span>
-            </li>
+            {authItems.map((item) => (
+              <li key={item.name}>
+                <Link
+                  href={item.path}
+                  className={`${
+                    item.isButton
+                      ? "bg-green-600 text-white px-4 lg:px-6 py-2 rounded-full hover:bg-green-700 text-sm lg:text-base"
+                      : pathname === item.path
+                      ? "text-green-600 font-semibold"
+                      : "text-gray-800 hover:text-green-600"
+                  } cursor-pointer transition-colors duration-200 font-medium text-sm lg:text-base`}
+                >
+                  {item.name}
+                </Link>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -347,23 +342,22 @@ const Navbar = () => {
                     </button>
                   </>
                 ) : (
-                  <>
-                    {/* Login only on mobile — Sign Up hidden during early access */}
+                  authItems.map((item) => (
                     <Link
-                      href="/login"
+                      key={item.name}
+                      href={item.path}
                       className={`${
-                        pathname === "/login"
+                        item.isButton
+                          ? "bg-green-600 text-white text-center"
+                          : pathname === item.path
                           ? "text-green-600 font-semibold bg-green-50"
                           : "text-gray-800 hover:text-green-600 hover:bg-gray-50"
                       } py-3 px-4 rounded-lg text-base`}
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Login
+                      {item.name}
                     </Link>
-                    <div className="py-3 px-4 rounded-lg text-base bg-gray-100 text-gray-500 text-center">
-                      Early Access — Registration Invite Only
-                    </div>
-                  </>
+                  ))
                 )}
               </div>
             </div>

@@ -17,16 +17,15 @@ import {
 } from "react-icons/fa";
 
 const founder = {
-  name: "Muhammad Israr Sultan",
+  name: "Muhammad Israr ",
   role: "Founder & CEO",
   image: "/israr.jpg",
-  bio: "Muhammad Israr Sultan is the visionary behind VoyageX. A passionate entrepreneur and technologist from Kohat, he founded VoyageX with a mission to revolutionize travel in Pakistan by connecting travelers with verified local guides and agencies. He is currently enrolled at Kohat University of Science and Technology (KUST) and is building VoyageX through the KUST Incubation Center.",
-  skills: ["Entrepreneurship", "Product Strategy", "Business Development", "Full-Stack Vision"],
+  bio: "Muhammad Israr is the visionary force behind VoyageX. Hailing from the rugged mountains of Orakzai Agency, he brings the authentic spirit of Pakistan's unexplored frontiers to the travel industry. A bold entrepreneur and tech innovator, he founded VoyageX with a burning mission: to transform how the world discovers Pakistan by connecting travelers with verified local guides and agencies. His journey began at the KUST Incubation Center, where the foundation of VoyageX was laid, and has since grown into a platform reshaping travel technology in Pakistan.",
+  skills: ["Visionary Leadership", "Product Strategy", "Travel Tech Innovation", "Business Development"],
   linkedin: "#",
   twitter: "#",
   email: "misrarsultan000@gmail.com",
 };
-
 const mentors = [
   {
     name: "Naeem Afridi",
