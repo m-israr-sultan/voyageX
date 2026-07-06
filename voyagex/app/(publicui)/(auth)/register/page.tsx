@@ -91,7 +91,7 @@
             <h3 className="text-2xl lg:text-3xl font-semibold text-gray-900">Guide</h3>
             <div className="relative w-[240px] h-[240px] lg:w-[280px] lg:h-[280px] my-4 lg:my-6">
               <Image
-                src="/guide 1.png"
+                src="/Guide 1.png"
                 alt="Guide"
                 fill
                 className="object-contain"
