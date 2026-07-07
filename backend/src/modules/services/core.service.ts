@@ -45,6 +45,9 @@ import { CreateReviewDto } from "../dto/reviews.dto";
 import { UpdateMeDto } from "../dto/users.dto";
 import { DisputeDto } from "../dto/bookings.dto";
 import { PaymentProviderFactory } from "../payments/providers/payment-provider.factory";
+import { PayoutOrchestrationService } from "../financial/services/payout-orchestration.service";
+import { FinancialCompletionService } from "../financial/services/financial-completion.service";
+import { RefundOrchestrationService } from "../financial/services/refund-orchestration.service";
 
 
 @Injectable()
@@ -56,6 +59,9 @@ export class CoreService {
     private readonly notificationService: NotificationService,
     private readonly audit: AuditService,
     private readonly paymentProviders: PaymentProviderFactory,
+    private readonly payoutOrchestration: PayoutOrchestrationService,
+    private readonly financialCompletion: FinancialCompletionService,
+    private readonly refundOrchestration: RefundOrchestrationService,
   ) {}
 
   private uid(): string {
@@ -838,11 +844,21 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       },
     });
 
+    if (initialStatus === PaymentStatus.HELD) {
+      this.triggerPaymentCompletion(payment.id);
+    }
+
     return {
       ...payment,
       providerMessage: providerResult.message,
       redirectUrl: providerResult.redirectUrl,
     };
+  }
+
+  private triggerPaymentCompletion(paymentId: string): void {
+    this.financialCompletion.completeTravelerPayment(paymentId).catch((err) =>
+      this.logger.warn(`Payment completion failed: ${err instanceof Error ? err.message : 'unknown'}`),
+    );
   }
 
   // ============================================
@@ -895,6 +911,8 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       metadata: { bookingId: payment.bookingId, amount: payment.amount },
     });
 
+    this.triggerPaymentCompletion(paymentId);
+
     return { message: 'Payment approved', paymentId, bookingId: payment.bookingId };
   }
 
@@ -946,54 +964,7 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
     amount: number,
     reason: string,
   ) {
-    const payment = await this.prisma.payments.findUnique({
-      where: { id: paymentId },
-      include: { bookings: true },
-    });
-
-    if (!payment) throw new NotFoundException('Payment not found');
-
-    const provider = this.paymentProviders.getProvider(payment.method);
-    const refundRef = `sandbox_refund_${this.uid()}`;
-
-    // In production: call provider.initiateRefund(payment.providerTransactionId, amount)
-    // Requires providerTransactionId to be populated (H-2).
-    // Each gateway has a different refund API endpoint.
-    let providerRefundId = refundRef;
-    if (!PLATFORM_CONFIG.sandboxMode && payment.providerTransactionId) {
-      const result = await provider.initiateRefund({
-        providerTransactionId: payment.providerTransactionId,
-        amount,
-        reason,
-      });
-      providerRefundId = result.refundReference;
-    }
-
-    const now = this.ts();
-    const refund = await this.prisma.refunds.create({
-      data: {
-        id: this.uid(),
-        bookingId: payment.bookingId,
-        paymentId,
-        amount,
-        currency: payment.currency,
-        reason,
-        status: RefundStatus.PENDING,
-        initiatedById: adminId,
-        providerRefundId,
-        updatedAt: now,
-      },
-    });
-
-    this.audit.log({
-      action: 'payment.refunded',
-      actorId: adminId,
-      resourceType: 'payment',
-      resourceId: paymentId,
-      metadata: { amount, reason, refundId: refund.id, providerRefundId },
-    });
-
-    return refund;
+    return this.refundOrchestration.initiateAdminRefund(adminId, paymentId, amount, reason);
   }
 
   async cancelBooking(id: string, userId: string, role: UserRole) {
@@ -1150,6 +1121,8 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
           releasedBy: releaseSource === ReleaseSource.AUTO_RELEASE ? 'SYSTEM' : travelerId,
           releaseSource,
           payoutAmount: guidePayout,
+          platformFee: commission,
+          netAmount: guidePayout,
           updatedAt: now,
         },
       });
@@ -1203,6 +1176,34 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
         autoReleaseAt: booking.autoReleaseAt,
       },
     });
+
+    const guideId = booking.packages.guideId;
+    const guideUserId = booking.packages.guides?.userId;
+    if (guideId && guideUserId && booking.payments) {
+      try {
+        await this.payoutOrchestration.processEscrowReleasePayout({
+          bookingId: id,
+          paymentId: booking.payments.id,
+          guideId,
+          guideUserId,
+          grossAmount: booking.totalPrice,
+          commissionAmount: commission,
+          netAmount: guidePayout,
+          releaseSource,
+          actorId: releaseSource === ReleaseSource.AUTO_RELEASE ? 'SYSTEM' : travelerId,
+        });
+      } catch (error: unknown) {
+        this.logger.error(
+          `Automatic payout failed for booking=${id}: ${error instanceof Error ? error.message : 'unknown'}`,
+        );
+      }
+    }
+
+    if (booking.payments) {
+      this.financialCompletion.completeEscrowRelease(id, booking.payments.id).catch((err) =>
+        this.logger.warn(`Escrow release completion failed: ${err instanceof Error ? err.message : 'unknown'}`),
+      );
+    }
 
     return updated;
   }
@@ -1553,6 +1554,8 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       resourceId: paymentId,
       metadata: { bookingId: payment.bookingId, sandboxMode: true },
     });
+
+    this.triggerPaymentCompletion(paymentId);
 
     return { message: 'Payment sandbox-confirmed', paymentId };
   }
@@ -2281,6 +2284,10 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       },
     });
 
+    this.financialCompletion.completeSubscriptionPayment(paymentId).catch((err) =>
+      this.logger.warn(`Subscription completion failed: ${err instanceof Error ? err.message : 'unknown'}`),
+    );
+
     return updated;
   }
 
@@ -2395,6 +2402,9 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
         agency.userId,
         agency.name,
         periodEnd,
+      );
+      this.financialCompletion.completeSubscriptionPayment(payment.id).catch((err) =>
+        this.logger.warn(`Subscription completion failed: ${err instanceof Error ? err.message : 'unknown'}`),
       );
     } else {
       // Notify agency that proof is under review

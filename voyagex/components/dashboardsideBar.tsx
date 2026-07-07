@@ -23,6 +23,10 @@ import {
   FaClipboardList,
   FaCheckSquare,
   FaGavel,
+  FaWallet,
+  FaHeartbeat,
+  FaSync,
+  FaCogs,
 } from "react-icons/fa";
 import { clearAuth } from "@/lib/auth";
 
@@ -48,6 +52,7 @@ export default function DashboardSideBar({ role, basePath }: SidebarProps) {
         { href: `/guide-panel/dashboard/verification`, label: "Verification", icon: FaShieldAlt },
         { href: `/guide-panel/dashboard/tours`, label: "My Tours", icon: FaRoute },
         { href: `/guide-panel/dashboard/earnings`, label: "Earnings", icon: FaDollarSign },
+        { href: `/guide-panel/dashboard/payout-accounts`, label: "Payout Accounts", icon: FaCreditCard },
         { href: `/guide-panel/dashboard/reviews`, label: "Reviews", icon: FaStar },
         { href: `/guide-panel/dashboard/availability`, label: "Availability", icon: FaCalendarAlt },
         { href: `/guide-panel/dashboard/packages`, label: "Packages", icon: FaBriefcase },
@@ -80,6 +85,12 @@ export default function DashboardSideBar({ role, basePath }: SidebarProps) {
         { href: `/admin/dashboard/international-bookings`, label: "International Bookings", icon: FaClipboardList },
         { href: `/admin/dashboard/subscriptions`, label: "Subscriptions", icon: FaCreditCard },
         { href: `/admin/dashboard/commissions`, label: "Commissions", icon: FaDollarSign },
+        { href: `/admin/dashboard/payouts`, label: "Guide Payouts", icon: FaWallet },
+        { href: `/admin/dashboard/financial-records`, label: "Financial Records", icon: FaClipboardList },
+        { href: `/admin/dashboard/financial-health`, label: "Financial Health", icon: FaHeartbeat },
+        { href: `/admin/dashboard/reconciliation`, label: "Reconciliation", icon: FaSync },
+        { href: `/admin/dashboard/webhooks`, label: "Webhook Ops", icon: FaEnvelope },
+        { href: `/admin/dashboard/financial-settings`, label: "Financial Settings", icon: FaCogs },
         { href: `/admin/dashboard/reports`, label: "Reports", icon: FaChartBar },
         { href: `/admin/dashboard/verifications`, label: "Verifications", icon: FaShieldAlt },
         { href: `/admin/dashboard/disputes`, label: "Disputes", icon: FaGavel },

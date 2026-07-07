@@ -546,6 +546,92 @@ export const adminApi = {
 
   rejectSubscriptionPayment: (paymentId: string, reason: string) =>
     api.post(`/admin/subscriptions/${paymentId}/reject`, { reason }),
+
+  getPendingPayoutAccounts: () => api.get('/admin/payouts/accounts/pending'),
+
+  approvePayoutAccount: (id: string) =>
+    api.post(`/admin/payouts/accounts/${id}/approve`),
+
+  rejectPayoutAccount: (id: string, reason: string) =>
+    api.post(`/admin/payouts/accounts/${id}/reject`, { reason }),
+
+  suspendPayoutAccount: (id: string, reason?: string) =>
+    api.post(`/admin/payouts/accounts/${id}/suspend`, { reason }),
+
+  listPayouts: (params?: { status?: string; search?: string; page?: number; limit?: number }) =>
+    api.get('/admin/payouts', { params }),
+
+  retryPayout: (id: string) => api.post(`/admin/payouts/${id}/retry`),
+
+  listFinancialReceipts: (params?: { type?: string; status?: string; search?: string; page?: number; limit?: number }) =>
+    api.get('/admin/financial/receipts', { params }),
+
+  listFinancialLedger: (params?: { type?: string; search?: string; page?: number; limit?: number }) =>
+    api.get('/admin/financial/ledger', { params }),
+
+  downloadReceipt: (id: string) =>
+    api.get(`/admin/financial/receipts/${id}/download`, { responseType: 'blob' }),
+
+  getFinancialMetrics: (params?: {
+    from?: string;
+    to?: string;
+    provider?: string;
+    guideId?: string;
+    agencyId?: string;
+  }) => api.get('/admin/financial/metrics', { params }),
+
+  exportFinancialMetrics: (params?: { from?: string; to?: string; provider?: string }) =>
+    api.get('/admin/financial/metrics/export', { params, responseType: 'blob' }),
+
+  listReconciliationReports: (params?: { page?: number; limit?: number }) =>
+    api.get('/admin/financial/reconciliation', { params }),
+
+  runReconciliation: (data?: { period?: string; periodStart?: string; periodEnd?: string }) =>
+    api.post('/admin/financial/reconciliation/run', data ?? {}),
+
+  resolveReconciliationIssue: (id: string) =>
+    api.patch(`/admin/financial/reconciliation/issues/${id}/resolve`),
+
+  listProviderStatements: (params?: { page?: number; provider?: string }) =>
+    api.get('/admin/financial/statements', { params }),
+
+  importProviderStatement: (data: {
+    provider: string;
+    statementType: string;
+    source: string;
+    fileName?: string;
+    lines: Array<{ providerReference: string; amount: number; currency?: string }>;
+  }) => api.post('/admin/financial/statements/import', data),
+
+  listFinancialSettings: () => api.get('/admin/financial/settings'),
+
+  updateFinancialSetting: (key: string, value: string) =>
+    api.patch(`/admin/financial/settings/${key}`, { value }),
+
+  listWebhookEvents: (params?: {
+    page?: number;
+    limit?: number;
+    provider?: string;
+    status?: string;
+    eventType?: string;
+  }) => api.get('/admin/financial/webhooks', { params }),
+
+  reprocessWebhook: (id: string) => api.post(`/admin/financial/webhooks/${id}/reprocess`),
+
+  listRefunds: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get('/admin/financial/refunds', { params }),
+
+  approveRefund: (id: string) => api.post(`/admin/financial/refunds/${id}/approve`),
+
+  rejectRefund: (id: string, reason: string) =>
+    api.post(`/admin/financial/refunds/${id}/reject`, { reason }),
+};
+
+export const receiptsApi = {
+  verify: (token: string) => api.get(`/receipts/verify/${token}`),
+
+  download: (id: string) =>
+    api.get(`/receipts/${id}/download`, { responseType: 'blob' }),
 };
 
 // ============================================
@@ -594,6 +680,41 @@ export const verificationsApi = {
 
   updateDocumentStatus: (id: string, status: string, rejectionReason?: string) =>
     api.patch(`/verifications/documents/${id}/status`, { status, ...(rejectionReason && { rejectionReason }) }),
+};
+
+// ============================================
+// GUIDE FINANCIAL API
+// ============================================
+export const guideFinancialApi = {
+  listPayoutAccounts: () => api.get('/guides/payout-accounts'),
+
+  createPayoutAccount: (data: {
+    provider: 'EASYPAISA' | 'JAZZCASH' | 'BANK_ACCOUNT';
+    accountTitle: string;
+    mobileNumber?: string;
+    iban?: string;
+    bankName?: string;
+    isDefault?: boolean;
+  }) => api.post('/guides/payout-accounts', data),
+
+  updatePayoutAccount: (
+    id: string,
+    data: {
+      accountTitle?: string;
+      mobileNumber?: string;
+      iban?: string;
+      bankName?: string;
+      isDefault?: boolean;
+    },
+  ) => api.put(`/guides/payout-accounts/${id}`, data),
+
+  deletePayoutAccount: (id: string) => api.delete(`/guides/payout-accounts/${id}`),
+
+  setDefaultPayoutAccount: (id: string) =>
+    api.patch(`/guides/payout-accounts/${id}/default`),
+
+  getWallet: (params?: { status?: string; search?: string; page?: number; limit?: number }) =>
+    api.get('/guides/wallet', { params }),
 };
 
 export default api;

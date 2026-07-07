@@ -71,9 +71,12 @@ enum PaymentStatus {
 }
 
 enum RefundStatus {
+  REQUESTED
+  APPROVED
   PENDING
   PROCESSED
   FAILED
+  REJECTED
 }
 
 // Status for agency_subscription_payments rows specifically
@@ -182,6 +185,12 @@ enum NotificationType {
   AGENCY_SUBSCRIPTION_CONFIRMED
   INTERNATIONAL_BOOKING_CREATED
   INTERNATIONAL_BOOKING_PAYMENT_RECEIVED
+  PAYOUT_INITIATED
+  PAYOUT_PROCESSING
+  PAYOUT_COMPLETED
+  PAYOUT_FAILED
+  PAYOUT_ACCOUNT_APPROVED
+  PAYOUT_ACCOUNT_REJECTED
   COMMISSION_DUE
   COMMISSION_OVERDUE
 }
@@ -208,6 +217,127 @@ enum CommissionStatus {
   PENDING
   PAID
   OVERDUE
+}
+
+// ============================================
+// FINANCIAL FOUNDATION ENUMS (Phase A)
+// ============================================
+
+enum PayoutProvider {
+  EASYPAISA
+  JAZZCASH
+  BANK
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum PayoutAccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum LedgerType {
+  TRAVELER_PAYMENT
+  ESCROW_HOLD
+  ESCROW_RELEASE
+  GUIDE_PAYOUT
+  AGENCY_SUBSCRIPTION
+  REFUND
+  COMMISSION
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum LedgerEntryStatus {
+  PENDING
+  POSTED
+  REVERSED
+}
+
+enum ReceiptType {
+  PAYMENT
+  PAYOUT
+  ESCROW
+  SUBSCRIPTION
+  REFUND
+}
+
+enum ReceiptStatus {
+  VALID
+  CANCELLED
+  REFUNDED
+}
+
+enum WebhookEventType {
+  PAYMENT
+  PAYOUT
+  SUBSCRIPTION
+  REFUND
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  VERIFIED
+  PROCESSING
+  PROCESSED
+  FAILED
+  REPLAYED
+}
+
+enum ReconciliationPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  MANUAL
+}
+
+enum ReconciliationReportStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReconciliationIssueType {
+  PAYMENT_WITHOUT_LEDGER
+  LEDGER_WITHOUT_RECEIPT
+  PAYOUT_PROVIDER_MISMATCH
+  PROVIDER_SUCCESS_NO_RECEIPT
+  DUPLICATE_LEDGER
+  DUPLICATE_RECEIPT
+  DUPLICATE_PAYOUT
+  STATEMENT_MISMATCH
+  WEBHOOK_UNPROCESSED
+  REFUND_WITHOUT_LEDGER
+}
+
+enum ReconciliationIssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProviderStatementStatus {
+  IMPORTED
+  PROCESSING
+  RECONCILED
+  FAILED
+}
+
+enum ProviderStatementSource {
+  CSV
+  EXCEL
+  API
+  MANUAL
 }
 
 // ============================================
@@ -244,6 +374,7 @@ model users {
   agencySubscriptionPayments  agency_subscription_payments[]
   internationalBookingAssignments international_booking_assignments[]
   refundsInitiated            refunds[]
+  ledgerEntries               financial_ledger[]
 }
 
 model agencies {
@@ -330,6 +461,8 @@ model guides {
   users               users      @relation(fields: [userId], references: [id], onDelete: Cascade)
   packages            packages[]
   reviews             reviews[]
+  payoutAccounts      guide_payout_accounts[]
+  payouts             guide_payouts[]
 }
 
 model bookings {
@@ -379,6 +512,9 @@ model bookings {
   // Commission system planned for future phase. Do not activate.
   agencyCommissionPayment       agency_commission_payments?
   refunds                       refunds[]
+  guidePayouts                  guide_payouts[]
+  ledgerEntries                 financial_ledger[]
+  receipts                      receipts[]
 }
 
 model disputes {
@@ -443,6 +579,9 @@ model payments {
   bookings                bookings        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   users                   users           @relation(fields: [userId], references: [id])
   refunds                 refunds[]
+  guidePayouts            guide_payouts[]
+  ledgerEntries           financial_ledger[]
+  receipts                receipts[]
 }
 
 // ============================================
@@ -450,27 +589,31 @@ model payments {
 // ============================================
 
 model refunds {
-  id              String       @id
-  bookingId       String
-  paymentId       String
-  amount          Float
-  currency        String       @default("PKR")
-  reason          String
-  status          RefundStatus @default(PENDING)
-  initiatedById   String
-
-  // Gateway refund reference — populated on real gateway refund.
-  // In sandbox: set to 'sandbox_refund_' + id.
-  // Production: call provider.initiateRefund(providerTransactionId, amount)
+  id               String       @id
+  bookingId        String
+  paymentId        String
+  amount           Float
+  currency         String       @default("PKR")
+  reason           String
+  status           RefundStatus @default(PENDING)
+  initiatedById    String
+  requestedById    String?
+  approvedById     String?
+  approvedAt       DateTime?
+  rejectedReason   String?
   providerRefundId String?
+  idempotencyKey   String?      @unique
+  processedAt      DateTime?
+  notes            String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime
+  bookings         bookings     @relation(fields: [bookingId], references: [id])
+  payments         payments     @relation(fields: [paymentId], references: [id])
+  initiatedBy      users        @relation(fields: [initiatedById], references: [id])
 
-  processedAt     DateTime?
-  notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime
-  bookings        bookings     @relation(fields: [bookingId], references: [id])
-  payments        payments     @relation(fields: [paymentId], references: [id])
-  initiatedBy     users        @relation(fields: [initiatedById], references: [id])
+  @@index([status])
+  @@index([paymentId])
+  @@index([bookingId])
 }
 
 // ============================================
@@ -496,6 +639,8 @@ model agency_subscription_payments {
   agencies        agencies                  @relation(fields: [agencyId], references: [id])
   users           users?                    @relation(fields: [userId], references: [id])
   userId          String?
+  receipts        receipts[]
+  ledgerEntries   financial_ledger[]
 }
 
 // Commission system planned for future phase. Do not activate.
@@ -687,4 +832,286 @@ model wishlists {
   users     users    @relation(fields: [userId], references: [id])
 
   @@unique([userId, packageId])
+}
+
+// ============================================
+// FINANCIAL FOUNDATION (Phase A)
+// Guide payout accounts, payouts, ledger, receipts.
+// Automatic payout execution belongs to later phases.
+// ============================================
+
+model guide_payout_accounts {
+  id            String              @id
+  guideId       String
+  provider      PayoutProvider
+  accountTitle  String
+  mobileNumber  String?
+  iban          String?
+  bankName      String?
+  accountStatus PayoutAccountStatus @default(PENDING_VERIFICATION)
+  verified      Boolean             @default(false)
+  isDefault     Boolean             @default(false)
+  rejectionReason String?
+  rejectedBy    String?
+  rejectedAt    DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime
+
+  guides        guides              @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@unique([guideId, provider, iban])
+  @@unique([guideId, provider, mobileNumber])
+  @@index([guideId])
+  @@index([guideId, isDefault])
+  @@index([accountStatus])
+}
+
+model guide_payouts {
+  id                String         @id
+  bookingId         String
+  paymentId         String
+  guideId           String
+  provider          PayoutProvider
+  grossAmount       Float
+  commissionAmount  Float
+  netAmount         Float
+  currency          String         @default("PKR")
+  status            PayoutStatus   @default(PENDING)
+  providerReference String?
+  voyagexReference  String         @unique
+  requestedAt       DateTime?
+  completedAt       DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+  retryCount        Int            @default(0)
+  metadata          Json?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime
+
+  bookings          bookings       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  payments          payments       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  guides            guides         @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  receipts          receipts[]
+  ledgerEntries     financial_ledger[]
+
+  @@unique([bookingId, paymentId])
+  @@index([guideId])
+  @@index([status])
+  @@index([providerReference])
+  @@index([requestedAt])
+}
+
+model financial_ledger {
+  id                    String            @id
+  ledgerType            LedgerType
+  bookingId             String?
+  paymentId             String?
+  payoutId              String?
+  subscriptionPaymentId String?
+  userId                String?
+  amount                Float
+  currency              String            @default("PKR")
+  status                LedgerEntryStatus @default(POSTED)
+  beforeBalance         Float?
+  afterBalance          Float?
+  remarks               String?
+  referenceNumber       String            @unique
+  idempotencyKey        String?           @unique
+  createdBy             String?
+  createdAt             DateTime          @default(now())
+
+  bookings              bookings?                  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  payments              payments?                  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  payouts               guide_payouts?             @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  subscriptionPayment   agency_subscription_payments? @relation(fields: [subscriptionPaymentId], references: [id], onDelete: SetNull)
+  users                 users?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ledgerType])
+  @@index([bookingId])
+  @@index([paymentId])
+  @@index([payoutId])
+  @@index([subscriptionPaymentId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model receipts {
+  id                    String        @id
+  receiptNumber         String        @unique
+  invoiceNumber         String?       @unique
+  bookingId             String?
+  paymentId             String?
+  payoutId              String?
+  subscriptionPaymentId String?
+  receiptType           ReceiptType
+  status                ReceiptStatus @default(VALID)
+  pdfPath               String?
+  verificationToken     String        @unique
+  verificationUrl       String?
+  providerReference     String?
+  voyagexReference      String        @unique
+  metadata              Json?
+  generatedAt           DateTime?
+  emailedAt             DateTime?
+  createdAt             DateTime      @default(now())
+
+  bookings              bookings?                  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  payments              payments?                  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  payouts               guide_payouts?             @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  subscriptionPayment   agency_subscription_payments? @relation(fields: [subscriptionPaymentId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@index([paymentId])
+  @@index([payoutId])
+  @@index([subscriptionPaymentId])
+  @@index([receiptType])
+  @@index([status])
+  @@index([providerReference])
+}
+
+model webhook_events {
+  id                String                  @id
+  eventType         WebhookEventType
+  provider          String
+  providerEventId   String
+  payload           Json?
+  verified          Boolean                 @default(false)
+  processingStatus  WebhookProcessingStatus @default(RECEIVED)
+  failureReason     String?
+  retryCount        Int                     @default(0)
+  processingTimeMs  Int?
+  lastRetryAt       DateTime?
+  processedAt       DateTime?
+  createdAt         DateTime                @default(now())
+
+  @@unique([eventType, provider, providerEventId])
+  @@index([eventType])
+  @@index([provider])
+  @@index([processingStatus])
+  @@index([processedAt])
+  @@index([createdAt])
+}
+
+// ============================================
+// PHASE D — Financial Operations
+// ============================================
+
+model financial_settings {
+  id          String   @id
+  key         String   @unique
+  value       String
+  valueType   String   @default("STRING")
+  label       String?
+  description String?
+  category    String   @default("general")
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@index([category])
+}
+
+model reconciliation_reports {
+  id            String                     @id
+  period        ReconciliationPeriod
+  periodStart   DateTime
+  periodEnd     DateTime
+  status        ReconciliationReportStatus @default(PENDING)
+  triggeredBy   String
+  issueCount    Int                        @default(0)
+  resolvedCount Int                        @default(0)
+  summary       Json?
+  completedAt   DateTime?
+  createdAt     DateTime                   @default(now())
+  issues        reconciliation_issues[]
+
+  @@index([period])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@index([createdAt])
+}
+
+model reconciliation_issues {
+  id           String                      @id
+  reportId     String
+  issueType    ReconciliationIssueType
+  severity     ReconciliationIssueSeverity @default(MEDIUM)
+  resourceType String
+  resourceId   String
+  description  String
+  resolved     Boolean                     @default(false)
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  metadata     Json?
+  createdAt    DateTime                    @default(now())
+  report       reconciliation_reports      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([issueType])
+  @@index([resolved])
+  @@index([resourceType, resourceId])
+}
+
+model provider_statements {
+  id               String                  @id
+  provider         String
+  statementType    String
+  source           ProviderStatementSource
+  fileName         String?
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  status           ProviderStatementStatus @default(IMPORTED)
+  importedBy       String?
+  totalRecords     Int                     @default(0)
+  matchedRecords   Int                     @default(0)
+  unmatchedRecords Int                     @default(0)
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime
+  lines            provider_statement_lines[]
+
+  @@index([provider])
+  @@index([statementType])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+}
+
+model provider_statement_lines {
+  id                  String              @id
+  statementId         String
+  providerReference   String
+  transactionDate     DateTime?
+  amount              Float
+  currency            String              @default("PKR")
+  matchStatus         String              @default("UNMATCHED")
+  matchedResourceType String?
+  matchedResourceId   String?
+  rawData             Json?
+  createdAt           DateTime            @default(now())
+  statement           provider_statements @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([statementId])
+  @@index([providerReference])
+  @@index([matchStatus])
+}
+
+model financial_accounting_snapshots {
+  id                        String   @id
+  periodStart               DateTime
+  periodEnd                 DateTime
+  gmv                       Float    @default(0)
+  platformRevenue           Float    @default(0)
+  guideEarnings             Float    @default(0)
+  agencySubscriptionRevenue Float    @default(0)
+  refundTotals              Float    @default(0)
+  commissionRevenue         Float    @default(0)
+  vatAmount                 Float?
+  taxAmount                 Float?
+  currency                  String   @default("PKR")
+  metadata                  Json?
+  createdAt                 DateTime @default(now())
+
+  @@index([periodStart, periodEnd])
+  @@index([createdAt])
 }

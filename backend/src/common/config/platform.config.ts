@@ -63,6 +63,9 @@ export const PLATFORM_CONFIG = {
 
   /** Sandbox mode — set to false only when real gateway credentials are active */
   sandboxMode: true,
+
+  /** Maximum automatic payout retry attempts after gateway failure */
+  payoutMaxRetries: 3,
 } as const;
 
 /**

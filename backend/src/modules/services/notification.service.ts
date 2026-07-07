@@ -276,4 +276,73 @@ export class NotificationService {
       { bookingId, hoursRemaining, amount }
     );
   }
+
+  // ============================================
+  // PAYOUT NOTIFICATIONS (Phase B)
+  // ============================================
+
+  async notifyPayoutInitiated(guideUserId: string, amount: number, bookingId: string) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_INITIATED,
+      'Payout Initiated',
+      `Your payout of Rs ${amount.toLocaleString()} has been initiated and is being processed.`,
+      { bookingId, amount },
+    );
+  }
+
+  async notifyPayoutProcessing(guideUserId: string, amount: number, bookingId: string) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_PROCESSING,
+      'Payout Processing',
+      `Rs ${amount.toLocaleString()} is being transferred to your payout account.`,
+      { bookingId, amount },
+    );
+  }
+
+  async notifyPayoutCompleted(guideUserId: string, amount: number, bookingId: string) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_COMPLETED,
+      'Payout Completed',
+      `Rs ${amount.toLocaleString()} has been successfully transferred to your account.`,
+      { bookingId, amount },
+    );
+  }
+
+  async notifyPayoutFailed(
+    guideUserId: string,
+    amount: number,
+    bookingId: string,
+    reason: string,
+  ) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_FAILED,
+      'Payout Failed',
+      `Your payout of Rs ${amount.toLocaleString()} could not be completed. Our team will retry automatically.`,
+      { bookingId, amount, reason },
+    );
+  }
+
+  async notifyPayoutAccountApproved(guideUserId: string, provider: string) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_ACCOUNT_APPROVED,
+      'Payout Account Approved',
+      `Your ${provider} payout account has been verified and is ready to receive payments.`,
+      { provider },
+    );
+  }
+
+  async notifyPayoutAccountRejected(guideUserId: string, provider: string, reason: string) {
+    await this.createNotification(
+      guideUserId,
+      NotificationType.PAYOUT_ACCOUNT_REJECTED,
+      'Payout Account Rejected',
+      `Your ${provider} payout account was rejected. Reason: ${reason}`,
+      { provider, reason },
+    );
+  }
 }

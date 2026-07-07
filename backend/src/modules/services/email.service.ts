@@ -4,6 +4,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { readFileSync } from 'fs';
 import { AppConfigService } from '../../config/app-config.service';
 import { buildOtpEmailContent } from '../../config/mail.templates';
 import { parseMailFromDisplayName } from '../../config/mail.util';
@@ -85,6 +86,66 @@ export class EmailService {
       throw new InternalServerErrorException(
         'Unable to send email at this time. Please try again later.',
       );
+    }
+  }
+
+  async sendReceiptEmail(
+    email: string,
+    subject: string,
+    receiptNumber: string,
+    pdfAbsolutePath: string,
+  ): Promise<void> {
+    if (!this.appConfig.isMailConfigured) {
+      if (!this.appConfig.isProduction) {
+        this.logger.warn(`[DEV] Receipt email to ${email} skipped (mail not configured)`);
+      }
+      return;
+    }
+
+    const from = this.appConfig.mailFrom;
+    const displayName = parseMailFromDisplayName(from);
+    const senderMatch = from.match(/^(.+?)\s*<(.+?)>$/);
+    const senderName = senderMatch ? senderMatch[1].trim() : displayName;
+    const senderEmail = senderMatch ? senderMatch[2].trim() : from;
+
+    const pdfBase64 = readFileSync(pdfAbsolutePath).toString('base64');
+    const filename = `${receiptNumber}.pdf`;
+
+    const payload = {
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email }],
+      subject,
+      htmlContent: `<p>Your VoyageX receipt <strong>${receiptNumber}</strong> is attached.</p><p>Thank you for using VoyageX.</p>`,
+      textContent: `Your VoyageX receipt ${receiptNumber} is attached. Thank you for using VoyageX.`,
+      attachment: [{ content: pdfBase64, name: filename }],
+    };
+
+    try {
+      const response = await fetch(this.brevoApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': this.appConfig.brevoApiKey,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(
+          `Brevo receipt email error to ${email}: status=${response.status} body=${errorBody}`,
+        );
+        throw new InternalServerErrorException('Unable to send receipt email.');
+      }
+
+      this.logger.log(`Receipt email sent to ${email} (${receiptNumber})`);
+    } catch (error: unknown) {
+      if (error instanceof InternalServerErrorException) throw error;
+      const apiError = error as { message?: string };
+      this.logger.error(
+        `Brevo receipt email failed to ${email}: ${apiError.message ?? 'unknown'}`,
+      );
+      throw new InternalServerErrorException('Unable to send receipt email.');
     }
   }
 }
