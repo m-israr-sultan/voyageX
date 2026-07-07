@@ -12,10 +12,6 @@ import { AdminFinancialController } from './modules/controllers/admin-financial.
 import { AdminFinancialOpsController } from './modules/controllers/admin-financial-ops.controller';
 import { FinancialWebhooksController } from './modules/controllers/financial-webhooks.controller';
 import { ReceiptsController } from './modules/controllers/receipts.controller';
-import {
-  GuidePayoutAccountsController,
-  GuideWalletController,
-} from './modules/controllers/guide-financial.controller';
 import { AgenciesController } from './modules/controllers/agencies.controller';
 import { AuthController } from './modules/controllers/auth.controller';
 import { BookingsController } from './modules/controllers/bookings.controller';
@@ -102,8 +98,6 @@ import type { EnvConfig } from './config/env.validation';
     AdminFinancialOpsController,
     FinancialWebhooksController,
     ReceiptsController,
-    GuidePayoutAccountsController,
-    GuideWalletController,
     WishlistController,
     VerificationsController
   ],
