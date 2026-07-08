@@ -1,4 +1,3 @@
-// voyagex/lib/api.ts
 import axios, { AxiosRequestConfig } from 'axios';
 import { getToken, clearAuth } from './auth';
 
@@ -22,82 +21,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
-// ── ✅ FIXED IMAGE URL CONVERTER INTERCEPTOR ──
-api.interceptors.response.use(
-  (response) => {
-    // Function to recursively convert image paths
-    const convertImagePaths = (data: any): any => {
-      if (!data) return data;
-      
-      // Handle arrays
-      if (Array.isArray(data)) {
-        return data.map(item => convertImagePaths(item));
-      }
-      
-      // Handle objects
-      if (typeof data === 'object') {
-        const result = { ...data };
-        
-        // List of fields that might contain image paths
-        const imageFields = ['image', 'avatar', 'photo', 'picture', 'thumbnail', 'banner', 'images', 'logo', 'imageUrl', 'coverImage'];
-        
-        for (const key of Object.keys(result)) {
-          // If this field might contain an image
-          if (imageFields.includes(key) && typeof result[key] === 'string') {
-            const value = result[key];
-            
-            // If value exists and is not already a full URL
-            if (value) {
-              const baseUrl = BASE_URL.replace('/api/v1', '');
-              
-              // Case 1: Already a full URL (http or https)
-              if (value.startsWith('http://') || value.startsWith('https://')) {
-                // Keep as is
-                result[key] = value;
-              }
-              // Case 2: Already using the new API format
-              else if (value.startsWith('/api/v1/images')) {
-                result[key] = `${baseUrl}${value}`;
-              }
-              // Case 3: Starts with 'uploads/'
-              else if (value.startsWith('uploads/')) {
-                const cleanPath = value.replace('uploads/', '');
-                result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
-              }
-              // Case 4: Just a plain filename (e.g., "1783499805647-tamtw5jl.jpg")
-              else if (!value.includes('/')) {
-                result[key] = `${baseUrl}/api/v1/images/images/${value}`;
-              }
-              // Case 5: Some other relative path (e.g., "images/photo.jpg")
-              else {
-                const cleanPath = value.replace(/^.*\//, '');
-                result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
-              }
-            }
-          }
-          
-          // Recursively process nested objects
-          if (result[key] && typeof result[key] === 'object') {
-            result[key] = convertImagePaths(result[key]);
-          }
-        }
-        
-        return result;
-      }
-      
-      return data;
-    };
-    
-    // Convert all image paths in the response
-    if (response.data) {
-      response.data = convertImagePaths(response.data);
-    }
-    
-    return response;
-  },
-  (error) => Promise.reject(error)
-);
 
 // ── Request interceptor — attach token + GET deduplication ──────────────────
 api.interceptors.request.use(
@@ -151,33 +74,6 @@ export function deduplicatedGet(url: string, config?: AxiosRequestConfig) {
   inFlightGets.set(key, req);
   return req;
 }
-
-// ============================================
-// IMAGE HELPER - Use in components if needed
-// ============================================
-export const imageHelper = {
-  getUrl: (path: string | null | undefined): string => {
-    if (!path) return '/images/placeholder.jpg';
-    
-    const baseUrl = BASE_URL.replace('/api/v1', '');
-    
-    // If already a full URL
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    
-    // If already using new API format
-    if (path.startsWith('/api/v1/images')) {
-      return `${baseUrl}${path}`;
-    }
-    
-    // Remove 'uploads/' if present
-    const cleanPath = path.replace('uploads/', '');
-    
-    // Return full URL
-    return `${baseUrl}/api/v1/images/images/${cleanPath}`;
-  }
-};
 
 // ============================================
 // AUTH API
