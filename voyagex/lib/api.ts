@@ -1,3 +1,4 @@
+// voyagex/lib/api.ts
 import axios, { AxiosRequestConfig } from 'axios';
 import { getToken, clearAuth } from './auth';
 
@@ -21,6 +22,62 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// ── ✅ IMAGE URL CONVERTER INTERCEPTOR ──
+api.interceptors.response.use(
+  (response) => {
+    // Function to recursively convert image paths
+    const convertImagePaths = (data: any): any => {
+      if (!data) return data;
+      
+      // Handle arrays
+      if (Array.isArray(data)) {
+        return data.map(item => convertImagePaths(item));
+      }
+      
+      // Handle objects
+      if (typeof data === 'object') {
+        const result = { ...data };
+        
+        // List of fields that might contain image paths
+        const imageFields = ['image', 'avatar', 'photo', 'picture', 'thumbnail', 'banner', 'images', 'logo', 'imageUrl', 'coverImage'];
+        
+        for (const key of Object.keys(result)) {
+          // If this field might contain an image
+          if (imageFields.includes(key) && typeof result[key] === 'string') {
+            const value = result[key];
+            
+            // If it's a relative path (starts with uploads/ or just filename)
+            if (value && !value.startsWith('http://') && !value.startsWith('https://') && !value.startsWith('/api/v1/images')) {
+              // Remove 'uploads/' if present
+              const cleanPath = value.replace('uploads/', '');
+              // Convert to full URL
+              const baseUrl = BASE_URL.replace('/api/v1', '');
+              result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
+            }
+          }
+          
+          // Recursively process nested objects
+          if (result[key] && typeof result[key] === 'object') {
+            result[key] = convertImagePaths(result[key]);
+          }
+        }
+        
+        return result;
+      }
+      
+      return data;
+    };
+    
+    // Convert all image paths in the response
+    if (response.data) {
+      response.data = convertImagePaths(response.data);
+    }
+    
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
 
 // ── Request interceptor — attach token + GET deduplication ──────────────────
 api.interceptors.request.use(
