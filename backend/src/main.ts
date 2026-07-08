@@ -1,8 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { join } from 'path';
-import { static as serveStatic } from 'express';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -26,7 +24,6 @@ async function bootstrap(): Promise<void> {
     new LoggingInterceptor(),
     new ResponseInterceptor()
   );
-  app.use('/uploads', serveStatic(join(process.cwd(), 'uploads')));
 
   const config = new DocumentBuilder()
     .setTitle('VoyageX API')

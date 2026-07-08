@@ -7,9 +7,13 @@ export class ImagesService {
   private supabase: SupabaseClient;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-    
+    const supabaseUrl =
+      this.configService.get<string>('SUPABASE_URL') ||
+      process.env.SUPABASE_URL;
+    const supabaseKey =
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY;
+
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Supabase credentials are not configured');
     }
@@ -55,7 +59,7 @@ export class ImagesService {
 
       if (error) {
         console.error('Supabase download error:', error);
-        throw new NotFoundException(`Image not found`);
+        throw new NotFoundException('Image not found');
       }
 
       if (!data) {
@@ -70,7 +74,11 @@ export class ImagesService {
     }
   }
 
-  async getSignedUrl(bucket: string, path: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(
+    bucket: string,
+    path: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
     try {
       const { data, error } = await this.supabase.storage
         .from(bucket)

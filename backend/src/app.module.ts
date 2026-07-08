@@ -53,7 +53,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppConfigModule } from './config/app-config.module';
 import { MailModule } from './config/mail.module';
 import { FinancialModule } from './modules/financial/financial.module';
-import { ImagesModule } from './modules/images/images.module'; // ✅ ADD THIS IMPORT
+import { ImagesModule } from './modules/images/images.module';
 import { validateEnv } from './config/env.validation';
 import type { EnvConfig } from './config/env.validation';
 
@@ -63,7 +63,7 @@ import type { EnvConfig } from './config/env.validation';
     AppConfigModule,
     MailModule,
     FinancialModule,
-    ImagesModule, // ✅ ADD THIS
+    ImagesModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -76,7 +76,7 @@ import type { EnvConfig } from './config/env.validation';
       }),
     }),
     ScheduleModule.forRoot(),
-    PrismaModule
+    PrismaModule,
   ],
   controllers: [
     AppController,
@@ -101,7 +101,7 @@ import type { EnvConfig } from './config/env.validation';
     FinancialWebhooksController,
     ReceiptsController,
     WishlistController,
-    VerificationsController
+    VerificationsController,
   ],
   providers: [
     AppService,
@@ -117,15 +117,14 @@ import type { EnvConfig } from './config/env.validation';
     MessagesGateway,
     NotificationsGateway,
     SubscriptionSchedulerService,
-    // Payment providers (sandbox — real credentials added at go-live)
     EasypaisaProvider,
     JazzcashProvider,
     CardProvider,
     BankTransferProvider,
     PaymentProviderFactory,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard }
-  ]
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
