@@ -53,6 +53,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppConfigModule } from './config/app-config.module';
 import { MailModule } from './config/mail.module';
 import { FinancialModule } from './modules/financial/financial.module';
+import { ImagesModule } from './modules/images/images.module'; // ✅ ADD THIS IMPORT
 import { validateEnv } from './config/env.validation';
 import type { EnvConfig } from './config/env.validation';
 
@@ -62,6 +63,7 @@ import type { EnvConfig } from './config/env.validation';
     AppConfigModule,
     MailModule,
     FinancialModule,
+    ImagesModule, // ✅ ADD THIS
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
