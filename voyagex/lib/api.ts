@@ -23,7 +23,7 @@ const api = axios.create({
   },
 });
 
-// ── ✅ IMAGE URL CONVERTER INTERCEPTOR ──
+// ── ✅ FIXED IMAGE URL CONVERTER INTERCEPTOR ──
 api.interceptors.response.use(
   (response) => {
     // Function to recursively convert image paths
@@ -47,13 +47,33 @@ api.interceptors.response.use(
           if (imageFields.includes(key) && typeof result[key] === 'string') {
             const value = result[key];
             
-            // If it's a relative path (starts with uploads/ or just filename)
-            if (value && !value.startsWith('http://') && !value.startsWith('https://') && !value.startsWith('/api/v1/images')) {
-              // Remove 'uploads/' if present
-              const cleanPath = value.replace('uploads/', '');
-              // Convert to full URL
+            // If value exists and is not already a full URL
+            if (value) {
               const baseUrl = BASE_URL.replace('/api/v1', '');
-              result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
+              
+              // Case 1: Already a full URL (http or https)
+              if (value.startsWith('http://') || value.startsWith('https://')) {
+                // Keep as is
+                result[key] = value;
+              }
+              // Case 2: Already using the new API format
+              else if (value.startsWith('/api/v1/images')) {
+                result[key] = `${baseUrl}${value}`;
+              }
+              // Case 3: Starts with 'uploads/'
+              else if (value.startsWith('uploads/')) {
+                const cleanPath = value.replace('uploads/', '');
+                result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
+              }
+              // Case 4: Just a plain filename (e.g., "1783499805647-tamtw5jl.jpg")
+              else if (!value.includes('/')) {
+                result[key] = `${baseUrl}/api/v1/images/images/${value}`;
+              }
+              // Case 5: Some other relative path (e.g., "images/photo.jpg")
+              else {
+                const cleanPath = value.replace(/^.*\//, '');
+                result[key] = `${baseUrl}/api/v1/images/images/${cleanPath}`;
+              }
             }
           }
           
@@ -131,6 +151,33 @@ export function deduplicatedGet(url: string, config?: AxiosRequestConfig) {
   inFlightGets.set(key, req);
   return req;
 }
+
+// ============================================
+// IMAGE HELPER - Use in components if needed
+// ============================================
+export const imageHelper = {
+  getUrl: (path: string | null | undefined): string => {
+    if (!path) return '/images/placeholder.jpg';
+    
+    const baseUrl = BASE_URL.replace('/api/v1', '');
+    
+    // If already a full URL
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    // If already using new API format
+    if (path.startsWith('/api/v1/images')) {
+      return `${baseUrl}${path}`;
+    }
+    
+    // Remove 'uploads/' if present
+    const cleanPath = path.replace('uploads/', '');
+    
+    // Return full URL
+    return `${baseUrl}/api/v1/images/images/${cleanPath}`;
+  }
+};
 
 // ============================================
 // AUTH API
