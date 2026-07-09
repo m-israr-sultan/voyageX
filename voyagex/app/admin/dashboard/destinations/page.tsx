@@ -11,6 +11,7 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 import { destinationsApi, uploadApi } from "@/lib/api";
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function AdminDestinationsPage() {
   const [destinations, setDestinations] = useState<any[]>([]);
@@ -19,6 +20,7 @@ export default function AdminDestinationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     city: "",
@@ -67,24 +69,39 @@ export default function AdminDestinationsPage() {
     }
   };
 
+  /**
+   * FIXED:
+   * - Uses backend `url` via extractUploadPath()
+   * - Stores: /api/v1/images/images/filename.jpg
+   * - Does NOT invent URL from bare filename
+   */
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setImageFile(file);
+    setUploading(true);
+    setError("");
 
     const uploadFormData = new FormData();
     uploadFormData.append("file", file);
 
     try {
       const response = await uploadApi.uploadImage(uploadFormData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path
-        ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}`
-        : "";
-      setForm((prev) => ({ ...prev, image: url }));
-    } catch (err) {
+      const imagePath = extractUploadPath(response.data);
+
+      if (!imagePath) {
+        setError("Upload succeeded but no image path was returned");
+        return;
+      }
+
+      // Store relative proxy path in form/DB
+      setForm((prev) => ({ ...prev, image: imagePath }));
+    } catch (err: any) {
       console.error("Error uploading image:", err);
+      setError(err.response?.data?.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -98,7 +115,8 @@ export default function AdminDestinationsPage() {
     setError("");
     try {
       const payload = {
-        title: form.name,
+        name: form.name,
+        title: form.name, // keep both for backend compatibility
         city: form.city,
         country: form.country,
         region: form.region,
@@ -145,7 +163,8 @@ export default function AdminDestinationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Permanently delete this destination? This cannot be undone.")) return;
+    if (!confirm("Permanently delete this destination? This cannot be undone."))
+      return;
     try {
       await destinationsApi.delete(id, true);
       fetchDestinations();
@@ -231,6 +250,7 @@ export default function AdminDestinationsPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#008A1E]"
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -264,6 +284,7 @@ export default function AdminDestinationsPage() {
                   </select>
                 </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
@@ -278,6 +299,7 @@ export default function AdminDestinationsPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#008A1E]"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Image
@@ -286,21 +308,35 @@ export default function AdminDestinationsPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
+                  disabled={uploading}
                   className="w-full text-sm"
                 />
-                {form.image && (
-                  <div className="relative h-24 rounded-md overflow-hidden mt-2 bg-gray-100">
+                {uploading && (
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <FaSpinner className="w-3 h-3 animate-spin" /> Uploading...
+                  </p>
+                )}
+                {form.image && !uploading && (
+                  <div className="relative rounded-md overflow-hidden mt-2 bg-gray-100">
                     <img
-                      src={form.image}
+                      src={getImageUrl(form.image)}
                       alt="Preview"
                       className="w-full h-24 object-cover rounded-md"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/agency-placeholder.jpg";
+                      }}
                     />
+                    <p className="text-[10px] text-gray-400 mt-1 break-all px-1">
+                      {form.image}
+                    </p>
                   </div>
                 )}
               </div>
+
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || uploading}
                 className="w-full py-2.5 bg-[#008A1E] text-white rounded-md text-sm font-medium hover:bg-[#006816] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving ? (
@@ -352,9 +388,13 @@ export default function AdminDestinationsPage() {
                         <div className="w-10 h-10 rounded-md bg-gray-100 overflow-hidden flex-shrink-0">
                           {dest.image ? (
                             <img
-                              src={dest.image}
+                              src={getImageUrl(dest.image)}
                               alt={dest.name}
                               className="w-10 h-10 object-cover rounded-md"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "/agency-placeholder.jpg";
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
