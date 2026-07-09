@@ -12,11 +12,19 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const appConfig = app.get(AppConfigService);
 
+  // ✅ Global API prefix
   app.setGlobalPrefix('api/v1');
+
+  // ✅ CORS configuration with image streaming support
   app.enableCors({
     origin: appConfig.getCorsOrigins(),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'Content-Type'], // ✅ Required for image streaming
     credentials: true,
   });
+
+  // ✅ Global pipes, filters, interceptors
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(
@@ -25,6 +33,7 @@ async function bootstrap(): Promise<void> {
     new ResponseInterceptor()
   );
 
+  // ✅ Swagger setup
   const config = new DocumentBuilder()
     .setTitle('VoyageX API')
     .setDescription('VoyageX backend API')
@@ -34,7 +43,13 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(appConfig.port);
+  // ✅ Start server
+  const port = appConfig.port;
+  await app.listen(port);
+  
+  console.log(`🚀 Backend running on port ${port}`);
+  console.log(`📚 Swagger docs: http://localhost:${port}/docs`);
+  console.log(`🖼️  Image proxy: http://localhost:${port}/api/v1/images/:bucket/:fileName`);
 }
 
 void bootstrap();
