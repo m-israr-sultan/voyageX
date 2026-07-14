@@ -38,7 +38,13 @@ export class VerificationsController {
     @CurrentUser() user: { id: string; role: UserRole },
     @Body() body: UploadVerificationDocumentDto
   ) {
-    if (!body.fileUrl.includes(`/verifications/${user.id}/`)) {
+    // Legacy local-storage paths embed the owner id in the path segment and
+    // must still match it. Current Supabase proxy paths
+    // (/api/v1/images/{bucket}/{fileName}) carry no owner segment — for
+    // those, ownership is enforced by binding the record to the
+    // authenticated userId below, not by inspecting the path string.
+    const isProxyPath = body.fileUrl.startsWith('/api/v1/images/');
+    if (!isProxyPath && !body.fileUrl.includes(`/verifications/${user.id}/`)) {
       throw new BadRequestException(
         'fileUrl owner mismatch. Path must include current user id'
       );
@@ -71,7 +77,7 @@ export class VerificationsController {
         userId: user.id,
         type: body.type,
         fileUrl: body.fileUrl,
-        fileKey: body.fileKey,
+        fileKey: body.fileKey || body.fileUrl.split('/').pop() || body.fileName,
         fileName: body.fileName,
         fileSize: body.fileSize,
         mimeType: body.mimeType,

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Param,
+  Req,
   Res,
   Query,
   NotFoundException,
@@ -9,13 +10,14 @@ import {
   UseGuards,
   HttpStatus,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ImagesService } from './images.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Images')
 @Controller('images')
@@ -28,18 +30,28 @@ export class ImagesController {
    * PROXY ENDPOINT: Fetches image from Supabase and streams it to frontend
    * URL format: /api/v1/images/:bucket/:fileName
    * Example: /api/v1/images/images/1715160000-abc123.jpg
+   *
+   * PUBLIC: images must be renderable by anonymous browser <img> requests,
+   * which never send an Authorization header. Read-only; does not expose
+   * delete or signed-url operations, which remain admin-only below.
    */
   @Get(':bucket/:fileName')
-  @ApiOperation({ summary: 'Proxy image from Supabase storage' })
+  @Public()
+  @ApiOperation({ summary: 'Proxy image from Supabase storage (public)' })
   @ApiResponse({ status: 200, description: 'Image returned successfully' })
   @ApiResponse({ status: 404, description: 'Image not found' })
   async getImage(
     @Param('bucket') bucket: string,
     @Param('fileName') fileName: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     try {
-      this.logger.log(`Fetching image: ${bucket}/${fileName}`);
+      // TEMPORARY diagnostic logging — remove after production verification (Phase 6).
+      this.logger.log(
+        `[image-proxy] path=${req.originalUrl} bucket=${bucket} fileName=${fileName} ` +
+          `authHeaderPresent=${Boolean(req.headers.authorization)}`,
+      );
 
       const imageBuffer = await this.imagesService.getImage(bucket, fileName);
 

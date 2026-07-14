@@ -14,6 +14,7 @@ import {
   FaMobileAlt,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface ExpiringAgency {
   id: string;
@@ -276,7 +277,7 @@ export default function SubscriptionsPage() {
                       <span className="bg-gray-100 px-2 py-0.5 rounded">Tx: {proof.transactionId}</span>
                     </div>
                     {proof.proofUrl && (
-                      <a href={proof.proofUrl} target="_blank" rel="noopener noreferrer"
+                      <a href={getImageUrl(proof.proofUrl)} target="_blank" rel="noopener noreferrer"
                         className="text-xs text-blue-600 hover:underline mt-1 inline-block">
                         View Proof Document →
                       </a>

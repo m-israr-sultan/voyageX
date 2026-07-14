@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { verificationsApi, uploadApi } from "@/lib/api";
 import { compressDocument } from "@/lib/imageCompression";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function GuideVerificationPage() {
   const [checklist, setChecklist] = useState<any>(null);
@@ -90,7 +91,7 @@ export default function GuideVerificationPage() {
       const uploadRes = await uploadApi.uploadDocument(formData);
       if (uploadRes.data.success) {
         const fileUrl = uploadRes.data.data?.url || uploadRes.data.data || uploadRes.data?.path || "";
-        const fileKey = uploadRes.data.data?.key || "";
+        const fileKey = uploadRes.data.data?.path || uploadRes.data.data?.key || "";
         await verificationsApi.uploadDocuments({
           type: uploadType,
           fileUrl: fileUrl,
@@ -404,10 +405,10 @@ export default function GuideVerificationPage() {
               </p>
               {previewDoc.fileUrl && (
                 previewDoc.mimeType?.startsWith("image/") ? (
-                  <img src={previewDoc.fileUrl} alt="Document" className="w-full rounded-lg border" />
+                  <img src={getImageUrl(previewDoc.fileUrl)} alt="Document" className="w-full rounded-lg border" />
                 ) : (
                   <a 
-                    href={previewDoc.fileUrl} 
+                    href={getImageUrl(previewDoc.fileUrl)} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#008A1E] text-white rounded-lg text-sm"

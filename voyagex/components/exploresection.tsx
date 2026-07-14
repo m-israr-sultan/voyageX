@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Heart, Star, MapPin } from "lucide-react";
 import { destinationsApi, packagesApi } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Destination {
   id: string;
@@ -67,7 +68,7 @@ const ExploreSection = () => {
             id: dest.id,
             slug: dest.slug,
             name: dest.name,
-            image: dest.image || dest.images?.[0] || "/agency-placeholder.jpg",
+            image: getImageUrl(dest.image || dest.images?.[0]),
             rating: dest.rating || 4.5,
             startingPrice: pricingByDestination.get(dest.id)?.min ?? null,
             country: dest.country || "Pakistan",

@@ -33,7 +33,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     _context: ExecutionContext,
     _status?: any
   ): TUser {
-    console.log('handleRequest - err:', err, 'user:', user, 'info:', _info);
     if (err || !user) {
       throw new UnauthorizedException('Invalid token');
     }

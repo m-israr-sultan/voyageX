@@ -6,6 +6,7 @@ import {
   FaSearch, FaFileAlt, FaEye, FaTimes,
 } from "react-icons/fa";
 import { verificationsApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminVerificationsPage() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -230,7 +231,7 @@ export default function AdminVerificationsPage() {
               <div className="relative w-full h-80 bg-gray-100 rounded-lg overflow-hidden mb-4">
                 {selectedDoc.fileUrl ? (
                   <img
-                    src={selectedDoc.fileUrl}
+                    src={getImageUrl(selectedDoc.fileUrl)}
                     alt={getDocumentTypeLabel(selectedDoc.type)}
                     className="w-full h-full object-contain"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

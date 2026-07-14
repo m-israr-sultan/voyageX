@@ -13,9 +13,10 @@ import {
   IsOptional,
   IsString,
   Min,
-  IsUrl,
+  Matches,
   MaxLength,
 } from 'class-validator';
+import { PROOF_URL_PATTERN, PROOF_URL_MESSAGE } from '../../common/constants/proof-url.pattern';
 
 export class InitiatePaymentDto {
   /** UUID of the booking being paid for. */
@@ -73,10 +74,12 @@ export class InitiatePaymentDto {
   bankReference?: string;
 
   /**
-   * Bank Transfer only — URL of the uploaded proof screenshot.
+   * Bank Transfer only — URL or backend proxy path of the uploaded proof
+   * screenshot (see PROOF_URL_PATTERN for accepted formats).
    * Admin reviews this before approving the payment.
    */
-  @IsUrl()
+  @IsString()
+  @Matches(PROOF_URL_PATTERN, { message: PROOF_URL_MESSAGE })
   @IsOptional()
   proofUrl?: string;
 }

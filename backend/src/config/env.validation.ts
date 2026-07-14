@@ -14,11 +14,8 @@ export type EnvConfig = {
   MAIL_FROM: string;
   WEATHER_API_KEY?: string;
   WEATHER_BASE_URL: string;
-  STORAGE_ENDPOINT?: string;
-  STORAGE_REGION?: string;
-  STORAGE_ACCESS_KEY?: string;
-  STORAGE_SECRET_KEY?: string;
-  STORAGE_BUCKET?: string;
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
 };
 
 function readString(value: unknown): string | undefined {
@@ -78,6 +75,18 @@ export const validateEnv = (config: Record<string, unknown>): EnvConfig => {
     throw new Error('Missing required environment variable: JWT_REFRESH_SECRET');
   }
 
+  // Required unconditionally: ImagesService (image upload/proxy/verification
+  // documents/payment proofs) throws at construction time if these are
+  // missing, so validating here fails fast at boot instead of on first request.
+  const supabaseUrl = readString(config.SUPABASE_URL);
+  const supabaseServiceRoleKey = readString(config.SUPABASE_SERVICE_ROLE_KEY);
+  if (!supabaseUrl) {
+    throw new Error('Missing required environment variable: SUPABASE_URL');
+  }
+  if (!supabaseServiceRoleKey) {
+    throw new Error('Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY');
+  }
+
   const frontendUrl =
     readString(config.FRONTEND_URL) ??
     (isProduction ? undefined : 'http://localhost:3000');
@@ -112,10 +121,7 @@ export const validateEnv = (config: Record<string, unknown>): EnvConfig => {
       readString(config.WEATHER_API_KEY) ?? readString(config.OPENWEATHER_API_KEY),
     WEATHER_BASE_URL:
       readString(config.WEATHER_BASE_URL) ?? 'https://api.openweathermap.org/data/2.5',
-    STORAGE_ENDPOINT: readString(config.STORAGE_ENDPOINT),
-    STORAGE_REGION: readString(config.STORAGE_REGION),
-    STORAGE_ACCESS_KEY: readString(config.STORAGE_ACCESS_KEY),
-    STORAGE_SECRET_KEY: readString(config.STORAGE_SECRET_KEY),
-    STORAGE_BUCKET: readString(config.STORAGE_BUCKET),
+    SUPABASE_URL: supabaseUrl,
+    SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
   };
 };

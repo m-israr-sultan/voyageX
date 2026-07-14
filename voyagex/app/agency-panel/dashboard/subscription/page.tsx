@@ -16,6 +16,7 @@ import {
   FaInfoCircle,
 } from "react-icons/fa";
 import { agenciesApi, uploadApi } from "@/lib/api";
+import { extractUploadPath } from "@/lib/image-utils";
 
 interface SubscriptionInfo {
   subscriptionStatus: string;
@@ -73,11 +74,15 @@ export default function AgencySubscriptionPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      setProofUrl(data.url ?? "");
-    } catch {
-      setError("Failed to upload proof. Please try again.");
+      const res = await uploadApi.uploadImage(formData);
+      const path = extractUploadPath(res.data);
+      if (!path) {
+        setError("Upload succeeded but no proof path was returned");
+        return;
+      }
+      setProofUrl(path);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to upload proof. Please try again.");
     } finally {
       setProofUploading(false);
     }

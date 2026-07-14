@@ -10,9 +10,10 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUrl,
+  Matches,
   MaxLength,
 } from 'class-validator';
+import { PROOF_URL_PATTERN, PROOF_URL_MESSAGE } from '../../common/constants/proof-url.pattern';
 
 export class AgencySubscriptionPaymentDto {
   /** Exactly one of the four permitted payment methods. */
@@ -44,9 +45,11 @@ export class AgencySubscriptionPaymentDto {
   bankReference?: string;
 
   /**
-   * Bank Transfer only — URL of the uploaded payment proof screenshot.
+   * Bank Transfer only — URL or backend proxy path of the uploaded payment
+   * proof screenshot (see PROOF_URL_PATTERN for accepted formats).
    */
-  @IsUrl()
+  @IsString()
+  @Matches(PROOF_URL_PATTERN, { message: PROOF_URL_MESSAGE })
   @IsOptional()
   proofUrl?: string;
 }

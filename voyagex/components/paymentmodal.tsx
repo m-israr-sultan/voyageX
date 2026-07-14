@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { FaCreditCard, FaMobileAlt, FaWallet, FaCheckCircle, FaLock, FaBuilding, FaInfoCircle, FaCloudUploadAlt } from "react-icons/fa";
-import { paymentsApi } from "@/lib/api";
+import { paymentsApi, uploadApi } from "@/lib/api";
+import { extractUploadPath } from "@/lib/image-utils";
 import type { PaymentMethodType } from "@/lib/types/payment.types";
 
 interface PaymentModalProps {
@@ -99,11 +100,16 @@ export default function PaymentModal({ isOpen, onClose, bookingData, onSuccess }
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      setProofUrl(data.url ?? "");
-    } catch {
-      setError("Failed to upload proof. Please try again.");
+      const res = await uploadApi.uploadImage(formData);
+      const path = extractUploadPath(res.data);
+      if (!path) {
+        setError("Upload succeeded but no proof path was returned");
+        return;
+      }
+      setProofUrl(path);
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setError(apiErr.response?.data?.message ?? "Failed to upload proof. Please try again.");
     } finally {
       setProofUploading(false);
     }

@@ -14,6 +14,7 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { destinationsApi, packagesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 const DestinationDetailPage = () => {
   const params = useParams();
@@ -107,7 +108,7 @@ const DestinationDetailPage = () => {
     );
   }
 
-  const displayImage = destination.image || destination.images?.[0] || "/agency-placeholder.jpg";
+  const displayImage = getImageUrl(destination.image || destination.images?.[0]);
   const minPackagePrice = packages.length > 0 ? Math.min(...packages.map((pkg) => Number(pkg.price || 0))) : null;
 
   return (

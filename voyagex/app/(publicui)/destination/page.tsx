@@ -17,6 +17,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { destinationsApi, packagesApi } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Destination {
   id: string;
@@ -81,7 +82,7 @@ const DestinationPage = () => {
             id: d.id,
             name: d.name,
             slug: d.slug,
-            image: d.image || d.images?.[0] || "/agency-placeholder.jpg",
+            image: getImageUrl(d.image || d.images?.[0]),
             rating: d.rating || 4.5,
             startingPrice: pricingByDestination.get(d.id)?.min ?? null,
             packages: pricingByDestination.get(d.id)?.count || d._count?.packages || 0,
