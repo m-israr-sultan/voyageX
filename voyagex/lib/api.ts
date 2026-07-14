@@ -666,11 +666,25 @@ export const paymentsApi = {
 // ============================================
 // VERIFICATIONS API
 // ============================================
+
+/**
+ * Matches backend UploadVerificationDocumentDto exactly.
+ * NOTE: this is a plain JSON body — POST /verifications/documents has no
+ * FileInterceptor, it only accepts already-uploaded file metadata (the file
+ * itself goes through uploadApi.uploadDocument() first).
+ */
+export interface UploadVerificationDocumentPayload {
+  type: string;
+  fileUrl: string;
+  fileKey?: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
 export const verificationsApi = {
-  uploadDocuments: (formData: FormData) =>
-    api.post('/verifications/documents', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  uploadDocuments: (payload: UploadVerificationDocumentPayload) =>
+    api.post('/verifications/documents', payload),
 
   getMyDocuments: () => api.get('/verifications/my-documents'),
 

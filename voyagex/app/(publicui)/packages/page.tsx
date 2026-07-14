@@ -19,6 +19,7 @@ import {
 import { MdOutlineMail } from "react-icons/md";
 
 import { packagesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -656,14 +657,7 @@ const PackagesPage = () => {
   const packagesToDisplay = searchPerformed ? filteredPackages : packages;
 
   const PackageCard = ({ pkg }: { pkg: Package }) => {
-    const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-    const resolveUrl = (path: string) => {
-      if (!path) return "/agency-placeholder.jpg";
-      if (path.startsWith("http")) return path;
-      return `${BASE}/${path.replace(/^\//, "")}`;
-    };
-
-    const imageUrl = pkg.image?.[0] ? resolveUrl(pkg.image[0]) : "/agency-placeholder.jpg";
+    const imageUrl = getImageUrl(pkg.image?.[0]);
 
     return (
       <div

@@ -11,6 +11,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer"; 
 import { packagesApi, weatherApi, messagesApi } from "@/lib/api";
 import { isLoggedIn, getUser } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 const PackageDetailPage = () => {
   const params = useParams();
@@ -112,13 +113,7 @@ const PackageDetailPage = () => {
     );
   }
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
-  const resolveUrl = (path: string) => {
-    if (!path) return '/agency-placeholder.jpg';
-    if (path.startsWith('http')) return path;
-    return `${BASE}/${path.replace(/^\//, '')}`;
-  };
-  const images = (packageData.images || []).map(resolveUrl);
+  const images = (packageData.images || []).map((p: string) => getImageUrl(p));
   const displayImage = images[0] || "/agency-placeholder.jpg";
   const totalPrice = (packageData.price || 0) * travelers;
 
@@ -194,7 +189,7 @@ const PackageDetailPage = () => {
                     <div className="grid grid-cols-4 gap-2">
                       {images.map((img: string, i: number) => (
                         <button key={i} onClick={() => setCurrentImageIndex(i)} className={`relative h-20 rounded-lg overflow-hidden ${i === currentImageIndex ? "ring-2 ring-green-600" : ""}`}>
-                          <img src={resolveUrl(img)} alt="Thumbnail" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }} />
+                          <img src={getImageUrl(img)} alt="Thumbnail" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }} />
                         </button>
                       ))}
                     </div>
@@ -318,7 +313,7 @@ const PackageDetailPage = () => {
                 <h3 className="text-xl font-semibold mb-3">{packageData.agencies ? "About Agency" : "About Guide"}</h3>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                    {packageData.agencies?.logo ? <img src={resolveUrl(packageData.agencies.logo)} alt="" className="w-12 h-12 object-cover" /> : <span className="text-gray-500 font-semibold">{(packageData.agencies?.name?.[0] || packageData.guides?.users?.firstName?.[0] || "V")}</span>}
+                    {packageData.agencies?.logo ? <img src={getImageUrl(packageData.agencies.logo)} alt="" className="w-12 h-12 object-cover" /> : <span className="text-gray-500 font-semibold">{(packageData.agencies?.name?.[0] || packageData.guides?.users?.firstName?.[0] || "V")}</span>}
                   </div>
                   <div><h4 className="font-semibold">{packageData.agencies?.name || getAuthorName()}</h4><div className="flex items-center gap-1">{renderStars(packageData.agencies?.rating || packageData.guides?.rating || 4.5)}</div></div>
                 </div>

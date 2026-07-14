@@ -109,3 +109,34 @@ export function extractUploadPaths(uploadResponseData: any): string[] {
     .map((item: any) => extractUploadPath(item))
     .filter((p: string) => Boolean(p));
 }
+
+/**
+ * UNIFIED UPLOAD CONTRACT
+ *
+ * Every upload flow (verification documents, package images, destination
+ * images, payment/subscription proofs) must transform the raw
+ * `uploadApi.uploadImage()` / `uploadApi.uploadDocument()` response into
+ * this shape before sending it to any other endpoint. This is the single
+ * place that reconciles the backend's `{ path, url }` response into a
+ * consistent contract, so every feature-specific DTO builder maps from the
+ * same fields instead of re-deriving them ad hoc.
+ */
+export interface UploadContract {
+  /** Relative proxy path — store this, never a hardcoded absolute URL. */
+  path: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+export function buildUploadContract(
+  uploadResponseData: any,
+  file: File,
+): UploadContract {
+  return {
+    path: extractUploadPath(uploadResponseData),
+    fileName: file.name,
+    fileSize: file.size,
+    mimeType: file.type,
+  };
+}

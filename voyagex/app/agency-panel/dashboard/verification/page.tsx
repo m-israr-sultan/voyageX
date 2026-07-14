@@ -14,7 +14,7 @@ import {
   FaInfoCircle,
 } from "react-icons/fa";
 import { verificationsApi, uploadApi } from "@/lib/api";
-import { getImageUrl } from "@/lib/image-utils";
+import { getImageUrl, buildUploadContract } from "@/lib/image-utils";
 import { compressDocument } from "@/lib/imageCompression";
 
 export default function AgencyVerificationPage() {
@@ -89,16 +89,19 @@ export default function AgencyVerificationPage() {
       formData.append("file", fileToUpload);
       const uploadRes = await uploadApi.uploadDocument(formData);
       if (uploadRes.data.success) {
-        const fileUrl = uploadRes.data.data?.url || uploadRes.data.data || uploadRes.data?.path || "";
-        const fileKey = uploadRes.data.data?.path || uploadRes.data.data?.key || "";
+        const contract = buildUploadContract(uploadRes.data, fileToUpload);
+        if (!contract.path) {
+          setMessageType("error");
+          setMessage("Upload succeeded but no file path was returned");
+          return;
+        }
         await verificationsApi.uploadDocuments({
           type: uploadType,
-          fileUrl,
-          fileKey,
-          fileName: file.name,
-          fileSize: fileToUpload.size,
-          mimeType: fileToUpload.type,
-        } as any);
+          fileUrl: contract.path,
+          fileName: contract.fileName,
+          fileSize: contract.fileSize,
+          mimeType: contract.mimeType,
+        });
         setMessageType("success");
         setMessage("Document uploaded! Pending admin review.");
         setTimeout(() => setMessage(""), 3000);

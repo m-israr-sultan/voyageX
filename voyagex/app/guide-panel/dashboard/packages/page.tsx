@@ -17,6 +17,7 @@ import {
   FaArrowDown,
 } from "react-icons/fa";
 import { packagesApi, destinationsApi, uploadApi } from "@/lib/api";
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function GuidePackagesPage() {
   const [packages, setPackages] = useState<any[]>([]);
@@ -132,10 +133,12 @@ export default function GuidePackagesPage() {
       const formData = new FormData();
       formData.append("file", file);
       const response = await uploadApi.uploadImage(formData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}` : "";
-      if (url) setImages([...images, url]);
+      const path = extractUploadPath(response.data);
+      if (path) setImages([...images, path]);
+      else {
+        setError("Upload succeeded but no image path was returned");
+        setTimeout(() => setError(""), 3000);
+      }
     } catch (err) { 
       console.error("Error uploading image:", err);
       setError("Failed to upload image");
@@ -389,7 +392,7 @@ export default function GuidePackagesPage() {
                   {images.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border group">
                       <img 
-                        src={img} 
+                        src={getImageUrl(img)} 
                         alt="" 
                         className="w-full h-full object-cover cursor-pointer"
                         onClick={() => setPreviewImage(img)}
@@ -554,7 +557,7 @@ export default function GuidePackagesPage() {
       {previewImage && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
           <div className="max-w-2xl max-h-[80vh] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <img src={previewImage} alt="Preview" className="w-full h-full object-contain" />
+            <img src={getImageUrl(previewImage)} alt="Preview" className="w-full h-full object-contain" />
             <button 
               onClick={() => setPreviewImage(null)} 
               className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-100"

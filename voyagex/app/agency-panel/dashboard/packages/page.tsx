@@ -17,6 +17,7 @@ import {
   FaArrowDown,
 } from "react-icons/fa";
 import { packagesApi, destinationsApi, uploadApi } from "@/lib/api";
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function AgencyPackagesPage() {
   const router = useRouter();
@@ -126,10 +127,12 @@ export default function AgencyPackagesPage() {
       const formData = new FormData();
       formData.append("file", file);
       const response = await uploadApi.uploadImage(formData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}` : "";
-      if (url) setImages([...images, url]);
+      const path = extractUploadPath(response.data);
+      if (path) setImages([...images, path]);
+      else {
+        setError("Upload succeeded but no image path was returned");
+        setTimeout(() => setError(""), 3000);
+      }
     } catch (err) { 
       console.error("Error uploading image:", err);
       setError("Failed to upload image");
@@ -280,7 +283,7 @@ export default function AgencyPackagesPage() {
 
               <div><label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {images.map((img, i) => (<div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border group"><img src={img} alt="" className="w-full h-full object-cover cursor-pointer" onClick={() => setPreviewImage(img)} /><button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100"><FaTimes /></button></div>))}
+                  {images.map((img, i) => (<div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border group"><img src={getImageUrl(img)} alt="" className="w-full h-full object-cover cursor-pointer" onClick={() => setPreviewImage(img)} /><button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100"><FaTimes /></button></div>))}
                   <label className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#008A1E] bg-gray-50">{uploadingImage ? <FaSpinner className="w-5 h-5 text-gray-400 animate-spin" /> : <><FaUpload className="w-5 h-5 text-gray-400" /><span className="text-xs text-gray-400 mt-1">Upload</span></>}<input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" /></label>
                 </div>
                 <p className="text-xs text-gray-400">Upload up to 10 images (JPG, PNG, max 5MB each)</p>
@@ -314,7 +317,7 @@ export default function AgencyPackagesPage() {
 
       {previewImage && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
-          <div className="max-w-2xl max-h-[80vh] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}><img src={previewImage} alt="Preview" className="w-full h-full object-contain" /><button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-100"><FaTimes /></button></div>
+          <div className="max-w-2xl max-h-[80vh] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}><img src={getImageUrl(previewImage)} alt="Preview" className="w-full h-full object-contain" /><button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-100"><FaTimes /></button></div>
         </div>
       )}
 
