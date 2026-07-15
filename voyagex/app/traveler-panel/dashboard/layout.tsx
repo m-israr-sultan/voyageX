@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import DashboardSideBar from "@/components/dashboardsideBar";
-import DashboardHeader from "@/components/dashboardheader";
+import DashboardShell from "@/components/DashboardShell";
 import { getToken, clearAuth } from "@/lib/auth";
 import { usersApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-utils";
@@ -104,21 +103,8 @@ export default function TravelerDashboardLayout({ children }: { children: React.
   const userImage = userData?.avatar ? getImageUrl(userData.avatar) : "/guid-placeholder.jpg";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar - hidden on mobile, visible on desktop */}
-      <div className="hidden lg:block">
-        <DashboardSideBar role="traveler" basePath="traveler-panel" />
-      </div>
-      
-      {/* Mobile Sidebar Toggle - You may need to add this to DashboardHeader */}
-      <DashboardHeader role="traveler" userName={userName} userImage={userImage} />
-      
-      {/* Main content - responsive margin */}
-      <main className="lg:ml-64 pt-14 sm:pt-16 p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
+    <DashboardShell role="traveler" basePath="traveler-panel" userName={userName} userImage={userImage}>
+      {children}
+    </DashboardShell>
   );
 }

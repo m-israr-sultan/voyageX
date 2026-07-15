@@ -24,7 +24,6 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
   const [userName, setUserName] = useState("");
   const [userImage, setUserImage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -109,16 +108,6 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
     router.push("/login");
   };
 
-  const handleMobileMenuClick = () => {
-    if (onMenuClick) {
-      onMenuClick();
-    } else {
-      setMobileSidebarOpen(!mobileSidebarOpen);
-      // Dispatch custom event for sidebar to listen to
-      window.dispatchEvent(new CustomEvent('toggleMobileSidebar', { detail: { open: !mobileSidebarOpen } }));
-    }
-  };
-
   // Loading Skeleton
   if (loading) {
     return (
@@ -144,7 +133,7 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
       <div className="flex items-center justify-between h-full px-4 sm:px-6">
         {/* Mobile Menu Button */}
         <button
-          onClick={handleMobileMenuClick}
+          onClick={onMenuClick}
           className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
           aria-label="Toggle menu"
         >

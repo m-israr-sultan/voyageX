@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { getUser, isLoggedIn } from "@/lib/auth";
-import DashboardSideBar from "@/components/dashboardsideBar";
-import DashboardHeader from "@/components/dashboardheader";
+import DashboardShell from "@/components/DashboardShell";
 import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminDashboardLayout({
@@ -50,14 +49,8 @@ export default function AdminDashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardSideBar role={user.role} basePath={user.basePath} />
-      <DashboardHeader role={user.role} userName={user.name} userImage={user.image} />
-      <main className="ml-60 pt-14 p-6">
-        <div className="max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
+    <DashboardShell role={user.role} basePath={user.basePath} userName={user.name} userImage={user.image}>
+      {children}
+    </DashboardShell>
   );
 }
