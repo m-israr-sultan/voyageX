@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MapPin, CheckCircle } from "lucide-react";
 import { agenciesApi } from "../lib/api";
+import { getImageUrl } from "../lib/image-utils";
 
 interface Agency {
   id: string;
@@ -15,13 +16,6 @@ interface Agency {
   packageCount: number;
   rating: number;
   isVerified: boolean;
-}
-
-function resolveUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const base = process.env.NEXT_PUBLIC_UPLOAD_URL ?? "http://localhost:8000";
-  return `${base}/${path.replace(/^\//, "")}`;
 }
 
 const AgenciesSection = () => {
@@ -46,7 +40,7 @@ const AgenciesSection = () => {
             slug:         agency.slug,
             name:         agency.name ?? "Agency",
             location:     [agency.city, agency.country].filter(Boolean).join(", ") || "Pakistan",
-            logo:         agency.logo ? resolveUrl(agency.logo) : "/agency-placeholder.jpg",
+            logo:         agency.logo ? getImageUrl(agency.logo) : "/agency-placeholder.jpg",
             status:       agency.isVerified ? "Verified" : "Pending",
             packageCount: agency._count?.packages ?? 0,
             rating:       agency.rating ?? 0,

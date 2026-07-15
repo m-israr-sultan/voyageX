@@ -13,13 +13,7 @@ import {
   FaStar
 } from "react-icons/fa";
 import { wishlistApi } from "@/lib/api";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-const resolveUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http") || path.startsWith("/")) return path;
-  return `${BASE}/${path}`;
-};
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function TravelerWishlistPage() {
   const router = useRouter();
@@ -176,7 +170,7 @@ export default function TravelerWishlistPage() {
             const pkg = item.packages;
             const price = pkg?.price || 0;
             const rawImage = pkg?.images?.[0] || "";
-            const image = rawImage ? resolveUrl(rawImage) : "/agency-placeholder.jpg";
+            const image = rawImage ? getImageUrl(rawImage) : "/agency-placeholder.jpg";
             const destination = pkg?.destinations;
             
             return (

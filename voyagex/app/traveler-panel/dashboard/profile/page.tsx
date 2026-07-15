@@ -14,13 +14,7 @@ import {
 } from "react-icons/fa";
 import { usersApi, uploadApi } from "@/lib/api";
 import { compressAvatar } from "@/lib/imageCompression";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-const resolveUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http") || path.startsWith("/")) return path;
-  return `${BASE}/${path}`;
-};
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function TravelerProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -50,14 +44,13 @@ export default function TravelerProfilePage() {
       if (result.success && result.data) {
         const data = result.data.user || result.data;
         setProfile(data);
-        const avatarUrl = data.avatar ? resolveUrl(data.avatar) : "";
         setFormData({ 
           firstName: data.firstName || "", 
           lastName: data.lastName || "", 
           phone: data.phone || "", 
-          avatar: avatarUrl 
+          avatar: data.avatar || "" 
         });
-        setAvatarPreview(avatarUrl || null);
+        setAvatarPreview(data.avatar ? getImageUrl(data.avatar) : null);
       }
     } catch (err: any) {
       console.error("Error fetching profile:", err);
@@ -92,10 +85,16 @@ export default function TravelerProfilePage() {
     uploadFormData.append("file", fileToUpload);
     try {
       const response = await uploadApi.uploadImage(uploadFormData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}` : "";
-      setFormData((prev) => ({ ...prev, avatar: url }));
+      const path = extractUploadPath(response.data);
+      if (!path) {
+        setMessageType("error");
+        setMessage("Upload succeeded but no image path was returned");
+        setAvatarPreview(formData.avatar ? getImageUrl(formData.avatar) : null);
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
+      setFormData((prev) => ({ ...prev, avatar: path }));
+      setAvatarPreview(getImageUrl(path));
       setMessageType("success");
       setMessage("Avatar uploaded successfully!");
       setTimeout(() => setMessage(""), 2000);
@@ -103,7 +102,7 @@ export default function TravelerProfilePage() {
       console.error("Error uploading avatar:", err);
       setMessageType("error");
       setMessage("Failed to upload avatar");
-      setAvatarPreview(formData.avatar || null);
+      setAvatarPreview(formData.avatar ? getImageUrl(formData.avatar) : null);
       setTimeout(() => setMessage(""), 3000);
     }
   };
@@ -211,7 +210,7 @@ export default function TravelerProfilePage() {
                 phone: profile?.phone || "",
                 avatar: profile?.avatar || ""
               });
-              setAvatarPreview(profile?.avatar || null);
+              setAvatarPreview(profile?.avatar ? getImageUrl(profile.avatar) : null);
               setMessage("");
             }} 
             className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
@@ -237,7 +236,7 @@ export default function TravelerProfilePage() {
           <div className="relative">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-200 border-4 border-white shadow-md">
               <img 
-                src={avatarPreview || formData.avatar || "/guid-placeholder.jpg"} 
+                src={avatarPreview || (formData.avatar ? getImageUrl(formData.avatar) : "/guid-placeholder.jpg")} 
                 alt="Avatar" 
                 className="w-full h-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/guid-placeholder.jpg"; }}

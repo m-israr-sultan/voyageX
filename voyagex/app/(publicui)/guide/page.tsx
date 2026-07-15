@@ -8,6 +8,7 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { guidesApi, messagesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Guide {
   id: string; slug: string; userId?: string;
@@ -66,15 +67,9 @@ const GuidePage = () => {
   }, [search, guides]);
 
   const getGuideName = (guide: Guide) => guide.users?.firstName && guide.users?.lastName ? `${guide.users.firstName} ${guide.users.lastName}` : "Unknown Guide";
-  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
-  const resolveUrl = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    return `${BASE}/${path.replace(/^\//, '')}`;
-  };
   const getGuideImage = (guide: Guide) => {
     const raw = guide.users?.avatar || '';
-    return raw ? resolveUrl(raw) : '/guid-placeholder.jpg';
+    return raw ? getImageUrl(raw) : '/guid-placeholder.jpg';
   };
   
   const getDisplaySpecialities = (specialities: string[]) => {

@@ -123,6 +123,7 @@ enum VerificationStatus {
   PENDING
   APPROVED
   REJECTED
+  SUPERSEDED
 }
 
 enum Region {

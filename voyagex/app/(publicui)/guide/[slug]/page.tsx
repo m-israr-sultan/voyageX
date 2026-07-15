@@ -9,6 +9,7 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { guidesApi, messagesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 const GuideProfilePage = () => {
   const params = useParams();
@@ -31,17 +32,10 @@ const GuideProfilePage = () => {
     if (slug) fetchGuide();
   }, [slug]);
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
-  const resolveUrl = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    return `${BASE}/${path.replace(/^\//, '')}`;
-  };
-
   const getGuideName = () => guide?.users?.firstName && guide?.users?.lastName ? `${guide.users.firstName} ${guide.users.lastName}` : guide?.name || "Unknown Guide";
   const getGuideImage = () => {
     const raw = guide?.users?.avatar || guide?.image || '';
-    return raw ? resolveUrl(raw) : '/guid-placeholder.jpg';
+    return raw ? getImageUrl(raw) : '/guid-placeholder.jpg';
   };
   const isAvailable = guide?.isAvailable !== false;
 
@@ -136,7 +130,7 @@ const GuideProfilePage = () => {
                       <div key={review.id} className="border-b border-gray-100 pb-4">
                         <div className="flex items-start gap-3">
                           <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            {review.users?.avatar ? <img src={resolveUrl(review.users.avatar)} alt="" className="w-full h-full object-cover rounded-full" /> : <span className="text-gray-500 font-semibold text-sm sm:text-base">{review.users?.firstName?.[0] || "U"}</span>}
+                            {review.users?.avatar ? <img src={getImageUrl(review.users.avatar)} alt="" className="w-full h-full object-cover rounded-full" /> : <span className="text-gray-500 font-semibold text-sm sm:text-base">{review.users?.firstName?.[0] || "U"}</span>}
                           </div>
                           <div className="flex-1"><div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0"><h4 className="font-semibold text-gray-900 text-sm sm:text-base">{review.users ? `${review.users.firstName} ${review.users.lastName}` : "Anonymous"}</h4><span className="text-xs text-gray-500">{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "N/A"}</span></div><div className="flex items-center gap-1 mt-1">{renderStars(review.rating)}</div><p className="text-gray-700 text-xs sm:text-sm mt-2">{review.comment}</p></div>
                         </div>
@@ -146,7 +140,7 @@ const GuideProfilePage = () => {
                 )}
                 {activeTab === "gallery" && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                    {guide.destinationImages?.length > 0 ? guide.destinationImages.map((img: string, i: number) => (<div key={i} className="relative aspect-video rounded-lg overflow-hidden"><img src={resolveUrl(img)} alt="Gallery" className="w-full h-full object-cover" /></div>)) : (<p className="text-gray-600 col-span-full text-center py-4 text-sm sm:text-base">No gallery images available</p>)}
+                    {guide.destinationImages?.length > 0 ? guide.destinationImages.map((img: string, i: number) => (<div key={i} className="relative aspect-video rounded-lg overflow-hidden"><img src={getImageUrl(img)} alt="Gallery" className="w-full h-full object-cover" /></div>)) : (<p className="text-gray-600 col-span-full text-center py-4 text-sm sm:text-base">No gallery images available</p>)}
                   </div>
                 )}
               </div>

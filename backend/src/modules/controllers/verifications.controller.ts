@@ -67,7 +67,7 @@ export class VerificationsController {
         type: body.type,
         status: VerificationStatus.REJECTED,
       },
-      data: { status: 'SUPERSEDED' as unknown as VerificationStatus, updatedAt: new Date() },
+      data: { status: VerificationStatus.SUPERSEDED, updatedAt: new Date() },
     });
 
     const doc = await this.prisma.verification_documents.create({

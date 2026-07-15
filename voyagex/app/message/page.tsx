@@ -8,6 +8,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { messagesApi } from "@/lib/api";
 import { isLoggedIn, getUser } from "../../lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function ConversationsPage() {
   const router = useRouter();
@@ -38,13 +39,6 @@ export default function ConversationsPage() {
     }
   };
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-  const resolveUrl = (path: string) => {
-    if (!path) return "";
-    if (path.startsWith("http")) return path;
-    return `${BASE}/${path.replace(/^\//, "")}`;
-  };
-
   const getRecipient = (conv: any) => {
     if (conv.users && currentUser) {
       return conv.users.find((u: any) => u.id !== currentUser.id) || conv.users[0];
@@ -67,10 +61,10 @@ export default function ConversationsPage() {
     if (!r) return "/guid-placeholder.jpg";
     if (r.role === "AGENCY") {
       const logo = r.agencies?.logo || r.logo || "";
-      return logo ? resolveUrl(logo) : "/agency-placeholder.jpg";
+      return logo ? getImageUrl(logo) : "/agency-placeholder.jpg";
     }
     const avatar = r.avatar || r.guides?.coverImage || "";
-    return avatar ? resolveUrl(avatar) : "/guid-placeholder.jpg";
+    return avatar ? getImageUrl(avatar) : "/guid-placeholder.jpg";
   };
 
   const getRecipientRole = (conv: any): string => {

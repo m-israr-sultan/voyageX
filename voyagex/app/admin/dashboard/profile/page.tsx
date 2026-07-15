@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { usersApi, uploadApi } from "@/lib/api";
 import { getUser, saveAuth, getToken, getRefreshToken } from "@/lib/auth";
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function AdminProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -56,12 +57,12 @@ export default function AdminProfilePage() {
     uploadFormData.append("file", file);
     try {
       const response = await uploadApi.uploadImage(uploadFormData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path
-        ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}`
-        : "";
-      setFormData((prev) => ({ ...prev, avatar: url }));
+      const path = extractUploadPath(response.data);
+      if (!path) {
+        console.error("Upload succeeded but no image path was returned");
+        return;
+      }
+      setFormData((prev) => ({ ...prev, avatar: path }));
     } catch (err) {
       console.error("Error uploading avatar:", err);
     }
@@ -141,7 +142,7 @@ export default function AdminProfilePage() {
         <div className="flex flex-col items-center mb-6">
           <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 mb-3">
             <img
-              src={formData.avatar || "/guid-placeholder.jpg"}
+              src={formData.avatar ? getImageUrl(formData.avatar) : "/guid-placeholder.jpg"}
               alt="Avatar"
               className="w-full h-full object-cover"
             />

@@ -18,14 +18,8 @@ import {
   FaCommentAlt,
 } from "react-icons/fa";
 import { bookingsApi, messagesApi, reviewsApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 import DisputeModal from "@/components/DisputeModal";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-const resolveUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http") || path.startsWith("/")) return path;
-  return `${BASE}/${path}`;
-};
 
 export default function TravelerBookingDetailPage() {
   const params = useParams();
@@ -315,7 +309,7 @@ export default function TravelerBookingDetailPage() {
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                 {guide.avatar ? (
-                  <img src={resolveUrl(guide.avatar)} alt={guide.firstName} className="w-full h-full object-cover" />
+                  <img src={getImageUrl(guide.avatar)} alt={guide.firstName} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500 text-xl font-bold">
                     {guide.firstName?.[0]}{guide.lastName?.[0]}

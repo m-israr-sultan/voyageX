@@ -8,14 +8,7 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { agenciesApi } from "@/lib/api";
-
-const UPLOAD_BASE = process.env.NEXT_PUBLIC_UPLOAD_URL ?? "http://localhost:8000";
-
-function resolveUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return `${UPLOAD_BASE}/${path.replace(/^\//, "")}`;
-}
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Agency {
   id: string; name: string; slug: string; logo: string; location: string;
@@ -45,7 +38,7 @@ const AgencyPage = () => {
             id: a.id,
             name: a.name,
             slug: a.slug,
-            logo: a.logo ? resolveUrl(a.logo) : "/agency-placeholder.jpg",
+            logo: a.logo ? getImageUrl(a.logo) : "/agency-placeholder.jpg",
             location: a.city && a.country ? `${a.city}, ${a.country}` : a.city || a.country || "Pakistan",
             city: a.city,
             country: a.country,

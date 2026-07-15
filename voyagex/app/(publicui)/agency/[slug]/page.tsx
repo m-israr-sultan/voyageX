@@ -10,15 +10,9 @@ import {
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { agenciesApi, messagesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function resolveUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const base = process.env.NEXT_PUBLIC_UPLOAD_URL ?? "http://localhost:8000";
-  return `${base}/${path.replace(/^\//, "")}`;
-}
 
 function getRegionLabel(value: string): string {
   const map: Record<string, string> = {
@@ -140,11 +134,11 @@ const AgencyDetailPage = () => {
 
   // ─── derived data ────────────────────────────────────────────────────────────
 
-  const agencyLogo    = agency.logo        ? resolveUrl(agency.logo)        : "/agency-placeholder.jpg";
-  const coverImage    = agency.coverImage  ? resolveUrl(agency.coverImage)  : agencyLogo;
+  const agencyLogo    = agency.logo        ? getImageUrl(agency.logo)        : "/agency-placeholder.jpg";
+  const coverImage    = agency.coverImage  ? getImageUrl(agency.coverImage)  : agencyLogo;
   const packagesList  = agency.packages    ?? [];
   const reviewsList   = agency.reviews     ?? [];
-  const galleryImages = (agency.galleryImages ?? []).map(resolveUrl).filter(Boolean);
+  const galleryImages = (agency.galleryImages ?? []).map((p: string) => getImageUrl(p)).filter(Boolean);
 
   // ─── render ─────────────────────────────────────────────────────────────────
 
@@ -326,7 +320,7 @@ const AgencyDetailPage = () => {
             {packagesList.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {packagesList.map((pkg: any) => {
-                  const pkgImg = pkg.images?.[0] ? resolveUrl(pkg.images[0]) : "/agency-placeholder.jpg";
+                  const pkgImg = pkg.images?.[0] ? getImageUrl(pkg.images[0]) : "/agency-placeholder.jpg";
                   return (
                     <div
                       key={pkg.id}
@@ -434,7 +428,7 @@ const AgencyDetailPage = () => {
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
                       {review.users?.avatar ? (
                         <img
-                          src={resolveUrl(review.users.avatar)}
+                          src={getImageUrl(review.users.avatar)}
                           alt=""
                           className="w-full h-full object-cover"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa";
 import { agenciesApi, uploadApi } from "@/lib/api";
 import { compressAvatar, compressGalleryImage } from "@/lib/imageCompression";
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 const NORTHERN_REGIONS: { value: string; label: string }[] = [
   { value: "HUNZA",         label: "Hunza Valley" },
@@ -40,13 +41,6 @@ const NORTHERN_REGIONS: { value: string; label: string }[] = [
 
 function getRegionLabel(value: string): string {
   return NORTHERN_REGIONS.find((r) => r.value === value)?.label ?? value ?? "—";
-}
-
-function resolveUrl(path: string): string {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const base = process.env.NEXT_PUBLIC_UPLOAD_URL ?? "http://localhost:8000";
-  return `${base}/${path.replace(/^\//, "")}`;
 }
 
 export default function AgencyProfilePage() {
@@ -129,8 +123,7 @@ export default function AgencyProfilePage() {
     const fd = new FormData();
     fd.append("file", compressed);
     const response = await uploadApi.uploadImage(fd);
-    const result   = response.data;
-    const path     = result?.data?.path ?? result?.path ?? result?.url ?? "";
+    const path = extractUploadPath(response.data);
     if (!path) throw new Error("Upload returned no path");
     return path;
   };
@@ -398,7 +391,7 @@ export default function AgencyProfilePage() {
         >
           {formData.coverImage ? (
             <img
-              src={resolveUrl(formData.coverImage)}
+              src={getImageUrl(formData.coverImage)}
               alt="Agency cover"
               className="w-full h-full object-cover"
               onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }}
@@ -443,7 +436,7 @@ export default function AgencyProfilePage() {
           >
             {formData.logo ? (
               <img
-                src={resolveUrl(formData.logo)}
+                src={getImageUrl(formData.logo)}
                 alt="Agency logo"
                 className="w-full h-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }}
@@ -657,7 +650,7 @@ export default function AgencyProfilePage() {
                     {galleryImages[index] ? (
                       <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                         <img
-                          src={resolveUrl(galleryImages[index])}
+                          src={getImageUrl(galleryImages[index])}
                           alt={`Gallery ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }}
@@ -712,7 +705,7 @@ export default function AgencyProfilePage() {
               <label className="block text-sm font-medium text-gray-700 mb-3">Gallery</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {galleryImages.filter(Boolean).map((img, idx) => {
-                  const resolvedImg = resolveUrl(img);
+                  const resolvedImg = getImageUrl(img);
                   return (
                     <div key={idx}
                       className="aspect-video rounded-lg overflow-hidden bg-gray-100 shadow-sm cursor-pointer hover:scale-105 transition-transform"

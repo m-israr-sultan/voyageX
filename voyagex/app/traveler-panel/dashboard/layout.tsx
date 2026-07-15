@@ -6,6 +6,7 @@ import DashboardSideBar from "@/components/dashboardsideBar";
 import DashboardHeader from "@/components/dashboardheader";
 import { getToken, clearAuth } from "@/lib/auth";
 import { usersApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 import { FaSpinner } from "react-icons/fa";
 
 export default function TravelerDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -100,13 +101,7 @@ export default function TravelerDashboardLayout({ children }: { children: React.
     ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "Traveler"
     : "Traveler";
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
-  const resolveUrl = (path: string) => {
-    if (!path) return "/guid-placeholder.jpg";
-    if (path.startsWith("http") || path.startsWith("/")) return path;
-    return `${BASE}/${path}`;
-  };
-  const userImage = userData?.avatar ? resolveUrl(userData.avatar) : "/guid-placeholder.jpg";
+  const userImage = userData?.avatar ? getImageUrl(userData.avatar) : "/guid-placeholder.jpg";
 
   return (
     <div className="min-h-screen bg-gray-50">

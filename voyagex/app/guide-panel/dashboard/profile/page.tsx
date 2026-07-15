@@ -15,13 +15,7 @@ import {
 } from "react-icons/fa";
 import { guidesApi, uploadApi, usersApi } from "@/lib/api";
 import { compressAvatar, compressGalleryImage } from "@/lib/imageCompression";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
-function resolveUrl(path: string): string {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `${BASE}/${path.replace(/^\//, '')}`;
-}
+import { extractUploadPath, getImageUrl } from "@/lib/image-utils";
 
 export default function GuideProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -136,10 +130,14 @@ export default function GuideProfilePage() {
     uploadFormData.append("file", compressed);
     try {
       const response = await uploadApi.uploadImage(uploadFormData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}` : "";
-      setFormData((prev) => ({ ...prev, [field]: url }));
+      const path = extractUploadPath(response.data);
+      if (!path) {
+        setMessageType("error");
+        setMessage("Upload succeeded but no image path was returned");
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
+      setFormData((prev) => ({ ...prev, [field]: path }));
       setMessageType("success");
       setMessage(`${field === "avatar" ? "Avatar" : "Cover image"} uploaded successfully!`);
       setTimeout(() => setMessage(""), 2000);
@@ -168,12 +166,16 @@ export default function GuideProfilePage() {
     uploadFormData.append("file", compressed);
     try {
       const response = await uploadApi.uploadImage(uploadFormData);
-      const result = response.data;
-      const path = result?.data?.path || result?.path || "";
-      const url = path ? `${process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8000"}/${path}` : "";
-      
+      const path = extractUploadPath(response.data);
+      if (!path) {
+        setMessageType("error");
+        setMessage("Upload succeeded but no image path was returned");
+        setTimeout(() => setMessage(""), 3000);
+        return;
+      }
+
       const newImages = [...destinationImages];
-      newImages[index] = url;
+      newImages[index] = path;
       setDestinationImages(newImages);
       
       setMessageType("success");
@@ -329,7 +331,7 @@ export default function GuideProfilePage() {
         {/* Cover Image Section */}
         <div className="relative h-32 sm:h-40 md:h-48 lg:h-56 bg-gray-200">
           <img 
-            src={formData.coverImage || "/agency-placeholder.jpg"} 
+            src={formData.coverImage ? getImageUrl(formData.coverImage) : "/agency-placeholder.jpg"} 
             alt="Cover" 
             className="w-full h-full object-cover"
           />
@@ -345,7 +347,7 @@ export default function GuideProfilePage() {
         <div className="relative px-4 sm:px-6">
           <div className="relative -mt-12 sm:-mt-16 w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white bg-gray-200">
             <img 
-              src={formData.avatar ? resolveUrl(formData.avatar) : "/guid-placeholder.jpg"} 
+              src={formData.avatar ? getImageUrl(formData.avatar) : "/guid-placeholder.jpg"} 
               alt="Avatar" 
               className="w-full h-full object-cover"
             />
@@ -538,7 +540,7 @@ export default function GuideProfilePage() {
                   <div key={index} className="relative group">
                     {destinationImages[index] ? (
                       <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
-                        <img src={resolveUrl(destinationImages[index])} alt={`Destination ${index + 1}`} className="w-full h-full object-cover" />
+                        <img src={getImageUrl(destinationImages[index])} alt={`Destination ${index + 1}`} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           <label className="px-3 py-2 bg-white text-gray-800 rounded-lg text-sm cursor-pointer hover:bg-gray-100 flex items-center gap-2">
                             <FaCamera className="w-4 h-4" /> Change
@@ -576,7 +578,7 @@ export default function GuideProfilePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {destinationImages.filter(img => img).map((img, idx) => (
                   <div key={idx} className="aspect-video rounded-lg overflow-hidden bg-gray-100">
-                    <img src={resolveUrl(img)} alt={`Destination ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={getImageUrl(img)} alt={`Destination ${idx + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>

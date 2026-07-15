@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FaBell, FaSearch, FaUserCircle, FaBars } from "react-icons/fa";
 import { notificationsApi, usersApi } from "@/lib/api";
 import { clearAuth } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface HeaderProps {
   role: "guide" | "traveler" | "agency" | "admin";
@@ -241,7 +242,7 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
               {userImage ? (
                 <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-200 bg-gray-100">
                   <img
-                    src={userImage}
+                    src={getImageUrl(userImage)}
                     alt={userName}
                     className="w-full h-full object-cover"
                     onError={(e) => { 
