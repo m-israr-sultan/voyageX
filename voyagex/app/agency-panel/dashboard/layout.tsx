@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DashboardSideBar from "@/components/dashboardsideBar";
 import DashboardHeader from "@/components/dashboardheader";
 import { getUser, isLoggedIn } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AgencyDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function AgencyDashboardLayout({ children }: { children: React.Re
 
   const user = {
     name: userData ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "Agency" : "Agency",
-    image: userData?.avatar || "/agency-placeholder.jpg",
+    image: userData?.avatar ? getImageUrl(userData.avatar) : "/agency-placeholder.jpg",
     role: "agency" as const,
     basePath: "agency-panel",
   };

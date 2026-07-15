@@ -22,6 +22,7 @@ import { messagesApi } from "@/lib/api";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { getUser } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Message {
   id: string;
@@ -215,8 +216,8 @@ export default function MessagesPage() {
 
   const getRecipientImage = (): string => {
     if (!recipient) return "/guid-placeholder.jpg";
-    if (isAgency) return recipient.logo || "/agency-placeholder.jpg";
-    return recipient.avatar || "/guid-placeholder.jpg";
+    if (isAgency) return recipient.logo ? getImageUrl(recipient.logo) : "/agency-placeholder.jpg";
+    return recipient.avatar ? getImageUrl(recipient.avatar) : "/guid-placeholder.jpg";
   };
 
   const getRecipientLocation = (): string => {

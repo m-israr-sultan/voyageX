@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getUser, isLoggedIn } from "@/lib/auth";
 import DashboardSideBar from "@/components/dashboardsideBar";
 import DashboardHeader from "@/components/dashboardheader";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminDashboardLayout({
   children,
@@ -43,7 +44,7 @@ export default function AdminDashboardLayout({
     name: userData
       ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "Admin User"
       : "Admin User",
-    image: userData?.avatar || "/admin-avatar.jpg",
+    image: userData?.avatar ? getImageUrl(userData.avatar) : "/admin-avatar.jpg",
     role: "admin" as const,
     basePath: "Admin",
   };

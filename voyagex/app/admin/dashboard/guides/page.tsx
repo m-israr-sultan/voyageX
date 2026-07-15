@@ -10,6 +10,7 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminGuidesPage() {
   const [guides, setGuides] = useState<any[]>([]);
@@ -67,7 +68,8 @@ export default function AdminGuidesPage() {
   };
 
   const getGuideAvatar = (guide: any) => {
-    return guide.users?.avatar || guide.user?.avatar || "/guid-placeholder.jpg";
+    const raw = guide.users?.avatar || guide.user?.avatar || "";
+    return raw ? getImageUrl(raw) : "/guid-placeholder.jpg";
   };
 
   const filteredGuides = guides.filter((g) => {

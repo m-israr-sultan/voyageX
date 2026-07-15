@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DashboardSideBar from "@/components/dashboardsideBar";
 import DashboardHeader from "@/components/dashboardheader";
 import { getUser, isLoggedIn } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function GuideDashboardLayout({
   children,
@@ -42,7 +43,7 @@ export default function GuideDashboardLayout({
     name: userData
       ? `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || "Guide"
       : "Guide",
-    image: userData?.avatar || "/guid-placeholder.jpg",
+    image: userData?.avatar ? getImageUrl(userData.avatar) : "/guid-placeholder.jpg",
     role: "guide" as const,
     basePath: "guide-panel",
   };
