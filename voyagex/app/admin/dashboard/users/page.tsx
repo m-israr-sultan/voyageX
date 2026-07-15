@@ -10,6 +10,7 @@ import {
   FaUserSlash,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -121,7 +122,7 @@ export default function AdminUsersPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
-                          <img src={user.avatar || "/guid-placeholder.jpg"} alt="" className="w-8 h-8 object-cover rounded-full" />
+                          <img src={user.avatar ? getImageUrl(user.avatar) : "/guid-placeholder.jpg"} alt="" className="w-8 h-8 object-cover rounded-full" />
                         </div>
                         <span className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</span>
                       </div>

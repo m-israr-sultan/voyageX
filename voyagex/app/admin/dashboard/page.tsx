@@ -12,6 +12,7 @@ import {
   FaArrowUp,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
@@ -179,7 +180,7 @@ export default function AdminDashboardPage() {
               <div key={user.id} className="p-4 space-y-2 hover:bg-gray-50/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
-                    <img src={user.avatar || "/guid-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
+                    <img src={user.avatar ? getImageUrl(user.avatar) : "/guid-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{getUserName(user)}</p>
@@ -219,7 +220,7 @@ export default function AdminDashboardPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
-                          <img src={user.avatar || "/guid-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
+                          <img src={user.avatar ? getImageUrl(user.avatar) : "/guid-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
                         </div>
                         <span className="text-sm font-medium text-gray-900">{getUserName(user)}</span>
                       </div>

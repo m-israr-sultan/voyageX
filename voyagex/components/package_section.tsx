@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { packagesApi } from "../lib/api";
+import { getImageUrl } from "../lib/image-utils";
 
 interface Package {
   id: string;
@@ -52,7 +53,7 @@ const PackagesSection = () => {
               slug: pkg.slug,
               title: pkg.title || "Package",
               author: authorName,
-              image: pkg.images?.[0] || pkg.image || "/agency-placeholder.jpg",
+              image: getImageUrl(pkg.images?.[0] || pkg.image),
               price: pkg.price || 0,
               capacity: pkg.capacity ? `${pkg.capacity} persons` : "N/A",
               duration: pkg.duration || 1,

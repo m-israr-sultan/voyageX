@@ -7,6 +7,7 @@ import Image from "next/image";
 import { FaBell, FaUserCircle } from "react-icons/fa";
 import { notificationsApi, usersApi } from "../lib/api";
 import { clearAuth, isLoggedIn as checkLoggedIn, getDashboardPath } from "../lib/auth";
+import { getImageUrl } from "../lib/image-utils";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -229,7 +230,7 @@ const Navbar = () => {
                 {userAvatar && !avatarError ? (
                   <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-200">
                     <img
-                      src={userAvatar}
+                      src={getImageUrl(userAvatar)}
                       alt={getUserDisplayName()}
                       className="w-full h-full object-cover"
                       onError={() => setAvatarError(true)}

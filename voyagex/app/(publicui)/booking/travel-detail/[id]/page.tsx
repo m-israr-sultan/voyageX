@@ -8,6 +8,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { guidesApi, packagesApi } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function TravelDetailsPage() {
   const router = useRouter();
@@ -96,8 +97,8 @@ export default function TravelDetailsPage() {
       notes: formData.notes,
       total: total.toString(),
       image: itemType === "guide"
-        ? (item?.users?.avatar || "/guid-placeholder.jpg")
-        : (item?.images?.[0] || "/agency-placeholder.jpg"),
+        ? (item?.users?.avatar ? getImageUrl(item.users.avatar) : "/guid-placeholder.jpg")
+        : (item?.images?.[0] ? getImageUrl(item.images[0]) : "/agency-placeholder.jpg"),
     });
 
     router.push(`/booking/billing-detail/${item?.id || id}?${queryParams.toString()}`);
@@ -133,8 +134,8 @@ export default function TravelDetailsPage() {
     : item?.title || "";
 
   const itemImage = itemType === "guide"
-    ? item?.users?.avatar || "/guid-placeholder.jpg"
-    : item?.images?.[0] || "/agency-placeholder.jpg";
+    ? (item?.users?.avatar ? getImageUrl(item.users.avatar) : "/guid-placeholder.jpg")
+    : (item?.images?.[0] ? getImageUrl(item.images[0]) : "/agency-placeholder.jpg");
 
   const itemPrice = itemType === "guide" ? item?.pricePerDay || 0 : item?.price || 0;
   

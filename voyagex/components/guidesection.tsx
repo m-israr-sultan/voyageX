@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, MapPin, CheckCircle } from "lucide-react";
 
 import { guidesApi, messagesApi } from "../lib/api";
+import { getImageUrl } from "../lib/image-utils";
 
 interface Guide {
   id: string;
@@ -46,7 +47,7 @@ const GuidesSection = () => {
                 ? `${userData.firstName} ${userData.lastName}`
                 : userData.firstName || "Tour Guide",
               location: guide.location || "Pakistan",
-              image: userData.avatar || "/guid-placeholder.jpg",
+              image: userData.avatar ? getImageUrl(userData.avatar) : "/guid-placeholder.jpg",
               pricePerDay: guide.pricePerDay || 0,
               specialty: guide.specialities?.[0] || "Tour Guide",
               rating: guide.rating || 0,

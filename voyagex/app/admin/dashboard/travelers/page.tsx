@@ -8,6 +8,7 @@ import {
   FaUserSlash,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminTravelersPage() {
   const [travelers, setTravelers] = useState<any[]>([]);
@@ -106,7 +107,7 @@ export default function AdminTravelersPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
                           <img
-                            src={traveler.avatar || "/guid-placeholder.jpg"}
+                            src={traveler.avatar ? getImageUrl(traveler.avatar) : "/guid-placeholder.jpg"}
                             alt=""
                             className="w-8 h-8 object-cover rounded-full"
                             onError={(e) => { (e.target as HTMLImageElement).src = "/guid-placeholder.jpg"; }}

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ArrowRight, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { packagesApi } from "../lib/api";
+import { getImageUrl } from "../lib/image-utils";
 
 const TestimonialSection = () => {
   const router = useRouter();
@@ -108,7 +109,7 @@ const TestimonialSection = () => {
               <div className="flex items-start gap-3 mb-4">
                 <div className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0">
                   <Image
-                    src={testimonial.user?.avatar || "/user-placeholder.jpg"}
+                    src={testimonial.user?.avatar ? getImageUrl(testimonial.user.avatar) : "/user-placeholder.jpg"}
                     alt={getUserName(testimonial)}
                     fill
                     className="rounded-full object-cover"

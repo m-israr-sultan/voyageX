@@ -11,6 +11,7 @@ import {
   FaBriefcase,
 } from "react-icons/fa";
 import { adminApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AdminAgenciesPage() {
   const [agencies, setAgencies] = useState<any[]>([]);
@@ -125,7 +126,7 @@ export default function AdminAgenciesPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
-                          <img src={agency.logo || "/agency-placeholder.jpg"} alt="" className="w-8 h-8 object-cover rounded-full" />
+                          <img src={agency.logo ? getImageUrl(agency.logo) : "/agency-placeholder.jpg"} alt="" className="w-8 h-8 object-cover rounded-full" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{agency.name || "Unknown"}</p>

@@ -15,6 +15,7 @@ import {
   FaBriefcase,
 } from "react-icons/fa";
 import { agenciesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default function AgencyGuidesPage() {
   const [guides, setGuides] = useState<any[]>([]);
@@ -179,7 +180,7 @@ export default function AgencyGuidesPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                       <img 
-                        src={user.avatar || "/guid-placeholder.jpg"} 
+                        src={user.avatar ? getImageUrl(user.avatar) : "/guid-placeholder.jpg"} 
                         alt={user.firstName} 
                         className="w-full h-full object-cover"
                         onError={(e) => { (e.target as HTMLImageElement).src = "/guid-placeholder.jpg"; }}
