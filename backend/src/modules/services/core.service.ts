@@ -80,6 +80,30 @@ export class CoreService {
     }
   }
 
+  // ------------------------------------------------------------------
+  // PUBLIC MARKETPLACE VISIBILITY
+  // A seller (guide/agency) is only visible in public listings, search,
+  // homepage sections, recommendations, or detail pages once an admin has
+  // approved AND verified them, and their user account is active (not
+  // suspended/banned). This is enforced here — in the backend — so the
+  // frontend cannot decide or bypass visibility by omitting a query param.
+  // Subscription status is intentionally NOT part of this gate: current
+  // business logic never revokes an agency's ability to operate when its
+  // subscription lapses (only billing reminders/expiry bookkeeping), so
+  // adding that here would be a new business rule, not a fix.
+  // ------------------------------------------------------------------
+  private readonly approvedGuideWhere = {
+    adminApproved: true,
+    isVerified: true,
+    users: { isActive: true },
+  } satisfies Prisma.guidesWhereInput;
+
+  private readonly approvedAgencyWhere = {
+    adminApproved: true,
+    isVerified: true,
+    users: { isActive: true },
+  } satisfies Prisma.agenciesWhereInput;
+
   userSelect = {
     id: true,
     email: true,
@@ -123,6 +147,7 @@ export class CoreService {
 
   guides() {
     return this.prisma.guides.findMany({
+      where: this.approvedGuideWhere,
       include: {
         users: {
           select: { id: true, firstName: true, lastName: true, avatar: true },
@@ -131,8 +156,8 @@ export class CoreService {
     });
   }
   guideBySlug(slug: string) {
-  return this.prisma.guides.findUnique({
-    where: { slug },
+  return this.prisma.guides.findFirst({
+    where: { slug, ...this.approvedGuideWhere },
     include: {
       users: {
         select: { id: true, firstName: true, lastName: true, avatar: true },
@@ -188,11 +213,16 @@ async agencies(params?: {
     sortOrder = 'desc',
   } = params ?? {};
 
-  const where: any = {};
+  // Marketplace visibility (adminApproved + isVerified + account active) is
+  // mandatory and NOT controllable by the caller — the `isVerified` query
+  // param is accepted for API backward-compatibility but has no effect,
+  // since unverified/unapproved/suspended sellers must never be returned
+  // by a public endpoint regardless of what the caller requests.
+  void isVerified;
+  const where: any = { ...this.approvedAgencyWhere };
   if (city)                     where.city       = { contains: city,    mode: 'insensitive' };
   if (country)                  where.country    = { contains: country, mode: 'insensitive' };
   if (minRating !== undefined)  where.rating     = { gte: minRating };
-  if (isVerified !== undefined) where.isVerified = isVerified;
 
   const validSortFields = ['createdAt', 'rating', 'name', 'totalReviews'];
   const orderField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
@@ -231,8 +261,8 @@ async agencies(params?: {
 // Includes packages, reviews, gallery, and safe user fields
 // ------------------------------------------------------------------
 async agencyBySlug(slug: string) {
-  const agency = await this.prisma.agencies.findUnique({
-    where: { slug },
+  const agency = await this.prisma.agencies.findFirst({
+    where: { slug, ...this.approvedAgencyWhere },
     include: {
       users: {
         select: {
@@ -391,9 +421,23 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
     });
   }
 
+  // A package is only publicly visible while active AND its owning seller
+  // (guide or agency) is admin-approved, verified, and not suspended. This
+  // prevents an unapproved/banned seller's packages from leaking into the
+  // marketplace via listings, homepage sections, or search.
+  private packageVisibilityWhere() {
+    return {
+      isActive: true,
+      OR: [
+        { guideId: { not: null }, guides: this.approvedGuideWhere },
+        { agencyId: { not: null }, agencies: this.approvedAgencyWhere },
+      ],
+    } satisfies Prisma.packagesWhereInput;
+  }
+
   packages() {
     return this.prisma.packages.findMany({
-      where: { isActive: true },
+      where: this.packageVisibilityWhere(),
       include: {
         destinations: true,
         guides: { include: { users: true } },
@@ -401,15 +445,19 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       },
     });
   }
-  packageBySlug(slug: string) {
-    return this.prisma.packages.findUniqueOrThrow({
-      where: { slug },
+  async packageBySlug(slug: string) {
+    const pkg = await this.prisma.packages.findFirst({
+      where: { slug, ...this.packageVisibilityWhere() },
       include: {
         destinations: true,
         guides: { include: { users: true } },
         agencies: true,
       },
     });
+    if (!pkg) {
+      throw new NotFoundException(`Package with slug "${slug}" not found`);
+    }
+    return pkg;
   }
   myPackages(userId: string, role: UserRole) {
     return role === UserRole.GUIDE
@@ -540,6 +588,26 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       isInternational?: boolean;
     },
   ) {
+    // ------------------------------------------------------------------
+    // BOOKING AUTHORIZATION MATRIX
+    // Allowed: Traveler books Guide. Traveler books Agency package.
+    //          Agency books Guide.
+    // Blocked: Guide-initiated bookings (of any kind), Agency booking an
+    //          agency package, Admin bookings, and any other combination.
+    // The target type (guide vs. agency package) is only fully known once
+    // the package/guideId is resolved below, so agency-specific enforcement
+    // happens after that resolution; guide/admin bookers are rejected
+    // immediately since no target makes them valid.
+    // ------------------------------------------------------------------
+    const booker = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!booker) throw new NotFoundException('Account not found');
+    if (booker.role === UserRole.GUIDE || booker.role === UserRole.ADMIN) {
+      throw new ForbiddenException(`${booker.role} accounts cannot create bookings`);
+    }
+
     // Validate dates
     const start = new Date(body.startDate);
     const end = new Date(body.endDate);
@@ -630,7 +698,15 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
     if (!guideId && pkg.guideId) {
       guideId = pkg.guideId;
     }
-    
+
+    // Agencies may only book a guide directly — never another seller's
+    // agency package.
+    if (booker.role === UserRole.AGENCY && !guideId) {
+      throw new ForbiddenException(
+        'Agency accounts may only book guides directly, not agency packages',
+      );
+    }
+
     // Check for duplicate booking - RETURN EXISTING INSTEAD OF ERROR
     const duplicate = await this.prisma.bookings.findFirst({
       where: {
@@ -1580,9 +1656,52 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       : null;
   }
 
+  // ------------------------------------------------------------------
+  // MESSAGE AUTHORIZATION MATRIX
+  // Conversation *initiation* is restricted to legitimate marketplace
+  // pairings only. Once a conversation already exists (e.g. a traveler
+  // initiated it), the other party may always reply — that is enforced by
+  // the participant check in sendMessage()/conversationMessages(), not here.
+  // Admin-to-marketplace-user conversations are intentionally not part of
+  // this matrix (not implemented) and are blocked like any other pairing.
+  // ------------------------------------------------------------------
+  private static readonly CONVERSATION_INITIATION_MATRIX: Partial<Record<UserRole, UserRole[]>> = {
+    [UserRole.TRAVELER]: [UserRole.GUIDE, UserRole.AGENCY],
+    [UserRole.AGENCY]: [UserRole.GUIDE],
+  };
+
+  private ensureConversationInitiationAllowed(
+    initiatorRole: UserRole,
+    recipientRole: UserRole,
+  ): void {
+    const allowedTargets =
+      CoreService.CONVERSATION_INITIATION_MATRIX[initiatorRole] ?? [];
+    if (!allowedTargets.includes(recipientRole)) {
+      throw new ForbiddenException(
+        `${initiatorRole} accounts cannot start a new conversation with ${recipientRole} accounts`,
+      );
+    }
+  }
+
   async createConversation(userId: string, recipientId: string) {
+    if (userId === recipientId) {
+      throw new BadRequestException('Cannot start a conversation with yourself');
+    }
+
+    // An existing conversation always establishes a valid relationship —
+    // return it regardless of role, so either side can keep messaging.
     const existing = await this.findConversationForPair(userId, recipientId);
     if (existing) return existing;
+
+    const [initiator, recipient] = await Promise.all([
+      this.prisma.users.findUnique({ where: { id: userId }, select: { role: true } }),
+      this.prisma.users.findUnique({ where: { id: recipientId }, select: { role: true } }),
+    ]);
+    if (!initiator) throw new NotFoundException('Sender account not found');
+    if (!recipient) throw new NotFoundException('Recipient not found');
+
+    this.ensureConversationInitiationAllowed(initiator.role, recipient.role);
+
     return this.prisma.conversations.create({
       data: {
         id: this.uid(),
@@ -1667,7 +1786,10 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
         conversationId: body.conversationId,
         senderId: userId,
         content: finalContent,
-        ...(safety.isFlagged && { isFlagged: true }),
+        ...(safety.isFlagged && {
+          isFlagged: true,
+          flagReason: safety.reasons.join(','),
+        }),
       },
     });
 
