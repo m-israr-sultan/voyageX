@@ -376,6 +376,8 @@ model users {
   internationalBookingAssignments international_booking_assignments[]
   refundsInitiated            refunds[]
   ledgerEntries               financial_ledger[]
+  bookingDrafts               booking_drafts[]
+  analyticsSessions           analytics_sessions[]
 }
 
 model agencies {
@@ -516,6 +518,35 @@ model bookings {
   guidePayouts                  guide_payouts[]
   ledgerEntries                 financial_ledger[]
   receipts                      receipts[]
+}
+
+// CheckoutSession / BookingDraft (Phase E — Booking Lifecycle Hardening).
+// Holds the traveler's in-progress checkout (dates, target guide/package,
+// server-computed price snapshot) BEFORE any real `bookings` row exists.
+// A real booking is only created — atomically with payment initiation —
+// once the traveler submits payment via POST /bookings/drafts/:id/checkout.
+// Drafts expire after PLATFORM_CONFIG.bookingDraftExpiryMinutes and are
+// purged by BookingDraftCleanupService.
+model booking_drafts {
+  id              String       @id
+  userId          String
+  packageId       String?
+  guideId         String?
+  startDate       DateTime
+  endDate         DateTime
+  groupSize       Int          @default(1)
+  notes           String?
+  totalPrice      Float
+  pricingModel    PricingModel @default(PER_PERSON)
+  isInternational Boolean      @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+
+  users           users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model disputes {
@@ -1115,4 +1146,105 @@ model financial_accounting_snapshots {
 
   @@index([periodStart, periodEnd])
   @@index([createdAt])
+}
+
+// ============================================
+// PHASE N — Analytics Infrastructure
+// Privacy-friendly, first-party visitor analytics. `visitorId` is a random
+// client-generated id (cookie/localStorage) — no fingerprinting, no
+// third-party trackers. `type`/`device`/`trafficSource` are free-form
+// strings (validated at the DTO layer) rather than Prisma enums so new
+// event/category names never require a schema migration.
+// ============================================
+
+model analytics_sessions {
+  id            String   @id
+  visitorId     String
+  userId        String?
+  country       String?
+  city          String?
+  region        String?
+  device        String?
+  browser       String?
+  os            String?
+  screenWidth   Int?
+  screenHeight  Int?
+  referrer      String?
+  trafficSource String?
+  landingPage   String?
+  userAgent     String?
+  startedAt     DateTime @default(now())
+  lastSeenAt    DateTime
+
+  users     users?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  pageViews analytics_page_views[]
+  events    analytics_events[]
+
+  @@index([visitorId])
+  @@index([userId])
+  @@index([startedAt])
+  @@index([lastSeenAt])
+  @@index([country])
+  @@index([device])
+  @@index([trafficSource])
+}
+
+model analytics_page_views {
+  id        String   @id
+  sessionId String
+  path      String
+  title     String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  sessions analytics_sessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([path])
+  @@index([createdAt])
+}
+
+model analytics_events {
+  id         String   @id
+  sessionId  String
+  type       String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  sessions analytics_sessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([type])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/**
+ * Pre-aggregated daily rollup so the admin analytics dashboard never has to
+ * scan raw events for historical days. Populated by
+ * AnalyticsAggregationScheduler shortly after each day ends; "today" is
+ * always computed live from the raw tables above.
+ */
+model analytics_daily_stats {
+  id                String   @id
+  date              DateTime @unique
+  totalVisitors     Int      @default(0)
+  uniqueVisitors    Int      @default(0)
+  returningVisitors Int      @default(0)
+  registeredActive  Int      @default(0)
+  anonymousActive   Int      @default(0)
+  pageViews         Int      @default(0)
+  countryCounts     Json?
+  deviceCounts      Json?
+  sourceCounts      Json?
+  topPages          Json?
+  topGuides         Json?
+  topPackages       Json?
+  topDestinations   Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  @@index([date])
 }

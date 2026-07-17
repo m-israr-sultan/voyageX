@@ -175,6 +175,8 @@ const PackagesSection = () => {
                 src={pkg.image}
                 alt={pkg.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/agency-placeholder.jpg";
                 }}

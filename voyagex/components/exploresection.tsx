@@ -177,6 +177,8 @@ const ExploreSection = () => {
                 src={destination.image || "/agency-placeholder.jpg"}
                 alt={destination.name}
                 className="w-full h-full object-cover hover:scale-[1.05] duration-300"
+                loading="lazy"
+                decoding="async"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/agency-placeholder.jpg"; }}
               />
               <button

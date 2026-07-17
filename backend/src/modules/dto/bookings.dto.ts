@@ -9,7 +9,11 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsUUID,
+  IsEnum,
+  Matches,
 } from 'class-validator';
+import { PaymentMethod } from '@prisma/client';
+import { PROOF_URL_PATTERN, PROOF_URL_MESSAGE } from '../../common/constants/proof-url.pattern';
 
 // Re-export canonical payment DTOs so controllers that used to import from
 // here can continue to work with a single-line change.
@@ -41,6 +45,46 @@ export class CalculatePriceDto {
   @IsDateString() endDate!: string;
   @IsInt() @Min(1) @Max(50) groupSize!: number;
   @IsOptional() @IsBoolean() isInternational?: boolean;
+}
+
+// ============================================================
+// BookingDraft / CheckoutSession DTOs (Phase E)
+// ============================================================
+
+export class CreateBookingDraftDto {
+  @IsOptional() @IsUUID() packageId?: string;
+  @IsOptional() @IsUUID() guideId?: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  startDate!: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  endDate!: string;
+
+  @IsOptional() @IsInt() @Min(1) @Max(50) groupSize?: number;
+  @IsOptional() @IsString() @MaxLength(500) notes?: string;
+  @IsOptional() @IsBoolean() isInternational?: boolean;
+}
+
+/**
+ * Submitted when the traveler confirms payment on a draft. Mirrors
+ * InitiatePaymentDto minus `bookingId`/`amount` — those are derived
+ * server-side from the draft (never trust a client-submitted amount here).
+ */
+export class CheckoutBookingDraftDto {
+  @IsEnum(PaymentMethod)
+  paymentMethod!: PaymentMethod;
+
+  @IsString() @MaxLength(20) @IsOptional() mobileNumber?: string;
+  @IsString() @IsOptional() cardToken?: string;
+  @IsString() @MaxLength(100) @IsOptional() bankReference?: string;
+
+  @IsString()
+  @Matches(PROOF_URL_PATTERN, { message: PROOF_URL_MESSAGE })
+  @IsOptional()
+  proofUrl?: string;
 }
 
 export class DisputeDto {

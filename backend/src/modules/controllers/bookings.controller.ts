@@ -5,6 +5,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import {
   CalculatePriceDto,
   CreateBookingDto,
+  CreateBookingDraftDto,
+  CheckoutBookingDraftDto,
   DisputeDto,
   InitiatePaymentDto,
   AssignInternationalBookingDto,
@@ -25,6 +27,31 @@ export class BookingsController {
   @Post()
   create(@CurrentUser() user: { id: string }, @Body() body: CreateBookingDto) {
     return this.core.createBooking(user.id, body);
+  }
+
+  // ============================================================
+  // BookingDraft / CheckoutSession (Phase E)
+  // Traveler Details -> Billing steps persist a draft here; no real
+  // booking exists until POST /bookings/drafts/:id/checkout succeeds.
+  // ============================================================
+
+  @Post('drafts')
+  createDraft(@CurrentUser() user: { id: string }, @Body() body: CreateBookingDraftDto) {
+    return this.core.createBookingDraft(user.id, body);
+  }
+
+  @Get('drafts/:id')
+  getDraft(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.core.getBookingDraft(id, user.id);
+  }
+
+  @Post('drafts/:id/checkout')
+  checkoutDraft(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @Body() body: CheckoutBookingDraftDto,
+  ) {
+    return this.core.checkoutBookingDraft(id, user.id, body);
   }
 
   @Get()

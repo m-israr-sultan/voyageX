@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import AboutSection from "@/components/aboutsection";
 import AgenciesSection from "@/components/agenciessection";
 import Footer from "@/components/footer";
@@ -8,6 +9,35 @@ import TestimonialSection from "@/components/testimonial";
 import ExploreSection from "@/components/exploresection";
 import "./marquee.css";
 import WhatsAppButton from "@/components/whatsappbutton";
+
+export const metadata: Metadata = {
+  title: "VoyageX — Pakistan Travel Marketplace | Local Guides & Tour Packages",
+  description:
+    "VoyageX is Pakistan's tourism marketplace. Book verified local guides and tour packages across Hunza, Skardu, Swat, Chitral, and northern Pakistan.",
+  keywords: [
+    "VoyageX",
+    "VoyageX Travel",
+    "Pakistan tourism marketplace",
+    "Northern Pakistan guides",
+    "Hunza guide",
+    "Skardu tour package",
+    "local guides Pakistan",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "VoyageX — Pakistan Travel Marketplace",
+    description:
+      "Book verified local guides and tour packages across northern Pakistan with VoyageX.",
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VoyageX — Pakistan Travel Marketplace",
+    description:
+      "Book verified local guides and tour packages across northern Pakistan with VoyageX.",
+  },
+};
 
 export default function Home() {
   return (

@@ -1,5 +1,6 @@
 // app/robots.ts
 import { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/seo';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,39 +9,38 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: [
         // Admin Dashboard (private)
+        '/admin',
         '/admin/',
-        '/admin/dashboard/',
-        
+
         // Agency Panel (private)
+        '/agency-panel',
         '/agency-panel/',
-        '/agency-panel/dashboard/',
-        
+
         // Guide Panel (private)
+        '/guide-panel',
         '/guide-panel/',
-        '/guide-panel/dashboard/',
-        
+
         // Traveler Panel (private)
+        '/traveler-panel',
         '/traveler-panel/',
-        '/traveler-panel/dashboard/',
-        
+
         // Message (private)
+        '/message',
         '/message/',
-        
+
         // Booking details (private)
         '/booking/billing-detail/',
         '/booking/confirmation/',
         '/booking/travel-detail/',
-        
+
         // Receipt verification (private)
         '/verify-receipt/',
-        
-        // API routes
+
+        // API / framework internals
         '/api/',
         '/_next/',
-        '/*.json$',
-        '/*.xml$',
       ],
     },
-    sitemap: 'https://voyagextravel.com/sitemap.xml',
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

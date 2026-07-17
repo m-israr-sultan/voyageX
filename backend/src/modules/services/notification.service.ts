@@ -86,6 +86,16 @@ export class NotificationService {
     );
   }
 
+  async notifyBookingCompleted(bookingId: string, travelerId: string, packageTitle: string) {
+    await this.createNotification(
+      travelerId,
+      NotificationType.BOOKING_COMPLETED,
+      'Trip Completed',
+      `Your booking for "${packageTitle}" is now complete. We hope you had a great trip!`,
+      { bookingId },
+    );
+  }
+
   async notifyBookingCancelled(bookingId: string, travelerId: string, guideId: string, packageTitle: string) {
     await this.createNotification(
       travelerId,

@@ -66,6 +66,31 @@ export const PLATFORM_CONFIG = {
 
   /** Maximum automatic payout retry attempts after gateway failure */
   payoutMaxRetries: 3,
+
+  /** How long a checkout draft (BookingDraft) stays valid before expiring */
+  bookingDraftExpiryMinutes: 30,
+
+  /**
+   * CANCELLATION POLICY
+   * Rule 1: full refund if cancelled within `cancellationFullRefundWindowMinutes`
+   *         of the booking being created, regardless of trip date.
+   * Rule 2 & 3: outside that grace window, cancellation is still allowed any
+   *         time before the trip starts, but only cancellations made at
+   *         least `cancellationDeadlineHours` before the trip start receive
+   *         a full refund — inside that window the refund is reduced to
+   *         `cancellationReducedRefundPercent`.
+   * Rule 4: cancellation is blocked entirely once the trip has started
+   *         (admin override excepted).
+   */
+  cancellationFullRefundWindowMinutes: 60,
+  cancellationDeadlineHours: 72,
+  cancellationReducedRefundPercent: 50,
+
+  /** How many days of raw analytics events/pageviews/sessions to retain before pruning (Phase N) */
+  analyticsRetentionDays: 180,
+
+  /** Session inactivity timeout in minutes — a new session starts after this much idle time (Phase N) */
+  analyticsSessionTimeoutMinutes: 30,
 } as const;
 
 /**
@@ -85,4 +110,53 @@ export function isFreePeriodActive(): boolean {
  */
 export function effectiveGuideCommissionRate(): number {
   return isFreePeriodActive() ? 0 : PLATFORM_CONFIG.guideCommissionRate;
+}
+
+export interface CancellationPolicyResult {
+  allowed: boolean;
+  refundPercent: number;
+  reason: string;
+}
+
+/**
+ * Evaluates the booking cancellation policy (see PLATFORM_CONFIG comments).
+ * `bypassDeadline` lets an admin cancel after the trip has started; it does
+ * NOT change the refund percentage — admins can still adjust the refund
+ * manually afterwards via the existing admin refund tools if needed.
+ */
+export function evaluateCancellationPolicy(
+  createdAt: Date,
+  startDate: Date,
+  now: Date = new Date(),
+  bypassDeadline = false,
+): CancellationPolicyResult {
+  const msSinceBooking = now.getTime() - createdAt.getTime();
+  const msUntilTrip = startDate.getTime() - now.getTime();
+
+  if (msUntilTrip <= 0 && !bypassDeadline) {
+    return { allowed: false, refundPercent: 0, reason: 'Cannot cancel after the trip has started' };
+  }
+
+  if (msSinceBooking <= PLATFORM_CONFIG.cancellationFullRefundWindowMinutes * 60_000) {
+    return {
+      allowed: true,
+      refundPercent: 100,
+      reason: `Full refund — cancelled within ${PLATFORM_CONFIG.cancellationFullRefundWindowMinutes} minutes of booking`,
+    };
+  }
+
+  const hoursUntilTrip = msUntilTrip / 3_600_000;
+  if (hoursUntilTrip >= PLATFORM_CONFIG.cancellationDeadlineHours) {
+    return {
+      allowed: true,
+      refundPercent: 100,
+      reason: `Full refund — cancelled more than ${PLATFORM_CONFIG.cancellationDeadlineHours}h before trip start`,
+    };
+  }
+
+  return {
+    allowed: true,
+    refundPercent: PLATFORM_CONFIG.cancellationReducedRefundPercent,
+    reason: `Reduced refund (${PLATFORM_CONFIG.cancellationReducedRefundPercent}%) — cancelled within ${PLATFORM_CONFIG.cancellationDeadlineHours}h of trip start`,
+  };
 }

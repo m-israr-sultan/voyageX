@@ -28,6 +28,8 @@ import {
   FaSync,
   FaCogs,
   FaTimes,
+  FaChartLine,
+  FaServer,
 } from "react-icons/fa";
 import { clearAuth } from "@/lib/auth";
 
@@ -100,6 +102,8 @@ export default function DashboardSideBar({ role, basePath, isOpen = false, onClo
         { href: `/admin/dashboard/verifications`, label: "Verifications", icon: FaShieldAlt },
         { href: `/admin/dashboard/disputes`, label: "Disputes", icon: FaGavel },
         { href: `/admin/dashboard/conversationMonitoring`, label: "Monitor", icon: FaEnvelope },
+        { href: `/admin/dashboard/analytics`, label: "Analytics", icon: FaChartLine },
+        { href: `/admin/dashboard/monitoring`, label: "System Health", icon: FaServer },
         { href: `/admin/dashboard/profile`, label: "Profile", icon: FaUser },
         { href: `/admin/dashboard/notifications`, label: "Notifications", icon: FaBell },
       ],

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { FaArrowLeft, FaCalendarAlt, FaUsers, FaSpinner } from "react-icons/fa";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import { guidesApi, packagesApi } from "@/lib/api";
+import { guidesApi, packagesApi, bookingsApi, availabilityApi } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
 import { getImageUrl } from "@/lib/image-utils";
 
@@ -17,6 +17,8 @@ export default function TravelDetailsPage() {
   const [item, setItem] = useState<any>(null);
   const [itemType, setItemType] = useState<"guide" | "package">("package");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [unavailableDates, setUnavailableDates] = useState<{ startDate: string; endDate: string }[]>([]);
 
   const [formData, setFormData] = useState({
     startDate: "",
@@ -40,12 +42,28 @@ export default function TravelDetailsPage() {
       const typeParam = new URLSearchParams(window.location.search).get("type") || "package";
       setItemType(typeParam as "guide" | "package");
 
+      let loadedItem: any = null;
       if (typeParam === "guide") {
         const response = await guidesApi.getBySlug(id);
-        if (response.data.success) setItem(response.data.data);
+        if (response.data.success) loadedItem = response.data.data;
       } else {
         const response = await packagesApi.getBySlug(id);
-        if (response.data.success) setItem(response.data.data);
+        if (response.data.success) loadedItem = response.data.data;
+      }
+      setItem(loadedItem);
+
+      // Fetch booked date ranges so the wizard can warn about overlaps
+      // before the traveler even submits (Phase G — date blocking).
+      if (loadedItem?.id) {
+        try {
+          const availRes = typeParam === "guide"
+            ? await availabilityApi.getGuideAvailability(loadedItem.id)
+            : await availabilityApi.getPackageAvailability(loadedItem.id);
+          const dates = availRes.data?.data?.unavailableDates || availRes.data?.unavailableDates || [];
+          setUnavailableDates(Array.isArray(dates) ? dates : []);
+        } catch {
+          setUnavailableDates([]);
+        }
       }
     } catch (err: any) {
       setError("Failed to load booking details");
@@ -54,12 +72,22 @@ export default function TravelDetailsPage() {
     }
   };
 
+  const rangesOverlap = (aStart: string, aEnd: string) => {
+    const s = new Date(aStart).getTime();
+    const e = new Date(aEnd).getTime();
+    return unavailableDates.some((r) => {
+      const rs = new Date(r.startDate).getTime();
+      const re = new Date(r.endDate).getTime();
+      return s < re && e > rs;
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.startDate || !formData.endDate) {
@@ -68,6 +96,10 @@ export default function TravelDetailsPage() {
     }
     if (new Date(formData.endDate) <= new Date(formData.startDate)) {
       setError("End date must be after start date");
+      return;
+    }
+    if (rangesOverlap(formData.startDate, formData.endDate)) {
+      setError("These dates are already booked. Please choose different dates.");
       return;
     }
 
@@ -83,25 +115,47 @@ export default function TravelDetailsPage() {
       total = (item?.price || 0) * formData.travelers;
     }
 
-    const queryParams = new URLSearchParams({
-      type: itemType,
-      itemId: item?.id || id,
-      itemName: itemType === "guide"
-        ? `${item?.users?.firstName || ""} ${item?.users?.lastName || ""}`.trim()
-        : item?.title || "",
-      price: itemType === "guide" ? (item?.pricePerDay || 0).toString() : (item?.price || 0).toString(),
-      duration: duration.toString(),
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      travelers: formData.travelers.toString(),
-      notes: formData.notes,
-      total: total.toString(),
-      image: itemType === "guide"
-        ? (item?.users?.avatar ? getImageUrl(item.users.avatar) : "/guid-placeholder.jpg")
-        : (item?.images?.[0] ? getImageUrl(item.images[0]) : "/agency-placeholder.jpg"),
-    });
+    setSubmitting(true);
+    setError("");
+    try {
+      // Server-side checkout session — no real booking exists yet.
+      const draftRes = await bookingsApi.createDraft({
+        packageId: itemType === "package" ? (item?.id || id) : undefined,
+        guideId: itemType === "guide" ? (item?.id || id) : undefined,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        groupSize: formData.travelers,
+        notes: formData.notes,
+      });
+      const draft = draftRes.data?.data || draftRes.data;
+      const draftId = draft?.id;
+      if (!draftId) throw new Error("Failed to start checkout");
 
-    router.push(`/booking/billing-detail/${item?.id || id}?${queryParams.toString()}`);
+      const queryParams = new URLSearchParams({
+        draftId,
+        type: itemType,
+        itemId: item?.id || id,
+        itemName: itemType === "guide"
+          ? `${item?.users?.firstName || ""} ${item?.users?.lastName || ""}`.trim()
+          : item?.title || "",
+        price: itemType === "guide" ? (item?.pricePerDay || 0).toString() : (item?.price || 0).toString(),
+        duration: duration.toString(),
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        travelers: formData.travelers.toString(),
+        notes: formData.notes,
+        total: total.toString(),
+        image: itemType === "guide"
+          ? (item?.users?.avatar ? getImageUrl(item.users.avatar) : "/guid-placeholder.jpg")
+          : (item?.images?.[0] ? getImageUrl(item.images[0]) : "/agency-placeholder.jpg"),
+      });
+
+      router.push(`/booking/billing-detail/${item?.id || id}?${queryParams.toString()}`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "Failed to start checkout. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -247,6 +301,19 @@ export default function TravelDetailsPage() {
                   )}
                 </div>
 
+                {unavailableDates.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    <p className="font-medium mb-1">Already booked — unavailable dates:</p>
+                    <ul className="space-y-0.5">
+                      {unavailableDates.slice(0, 5).map((r, idx) => (
+                        <li key={idx}>
+                          {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests (Optional)</label>
                   <textarea
@@ -261,9 +328,10 @@ export default function TravelDetailsPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#008A1E] text-white font-semibold rounded-lg hover:bg-[#006816] transition-colors"
+                  disabled={submitting}
+                  className="w-full py-3 bg-[#008A1E] text-white font-semibold rounded-lg hover:bg-[#006816] transition-colors disabled:opacity-50 disabled:cursor-wait"
                 >
-                  Continue to Billing
+                  {submitting ? "Preparing checkout…" : "Continue to Billing"}
                 </button>
               </form>
             </div>

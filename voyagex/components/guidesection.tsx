@@ -183,6 +183,8 @@ const GuidesSection = () => {
                 src={guide.image}
                 alt={guide.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/guid-placeholder.jpg";
                 }}

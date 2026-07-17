@@ -268,7 +268,7 @@ export const bookingsApi = {
 
   cancel: (id: string) => api.patch(`/bookings/${id}/cancel`),
 
-  startTour: (id: string) => api.patch(`/bookings/${id}/start-tour`),
+  startTour: (id: string) => api.patch(`/bookings/${id}/start`),
 
   requestCompletion: (id: string) => api.patch(`/bookings/${id}/request-completion`),
 
@@ -279,6 +279,42 @@ export const bookingsApi = {
 
   resolveDispute: (id: string, data: { decision: string; adminNote: string }) =>
     api.patch(`/bookings/${id}/resolve-dispute`, data),
+
+  // ============================================
+  // BookingDraft / CheckoutSession (Phase E)
+  // No real booking exists until checkoutDraft() succeeds.
+  // ============================================
+
+  createDraft: (data: {
+    packageId?: string;
+    guideId?: string;
+    startDate: string;
+    endDate: string;
+    groupSize?: number;
+    notes?: string;
+    isInternational?: boolean;
+  }) => api.post('/bookings/drafts', data),
+
+  getDraft: (id: string) => api.get(`/bookings/drafts/${id}`),
+
+  checkoutDraft: (
+    id: string,
+    data: {
+      paymentMethod: string;
+      mobileNumber?: string;
+      cardToken?: string;
+      bankReference?: string;
+      proofUrl?: string;
+    },
+  ) => api.post(`/bookings/drafts/${id}/checkout`, data),
+};
+
+// ============================================
+// AVAILABILITY API (Phase G — date blocking)
+// ============================================
+export const availabilityApi = {
+  getGuideAvailability: (guideId: string) => api.get(`/guides/${guideId}/availability`),
+  getPackageAvailability: (packageId: string) => api.get(`/packages/${packageId}/availability`),
 };
 
 // ============================================
@@ -729,6 +765,31 @@ export const guideFinancialApi = {
 
   getWallet: (params?: { status?: string; search?: string; page?: number; limit?: number }) =>
     api.get('/guides/wallet', { params }),
+};
+
+// ============================================
+// ADMIN ANALYTICS API (Phase M)
+// ============================================
+export interface AnalyticsRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export const analyticsAdminApi = {
+  getOverview: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/overview', { params }),
+  getGeography: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/geography', { params }),
+  getTraffic: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/traffic', { params }),
+  getDevices: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/devices', { params }),
+  getSources: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/sources', { params }),
+  getBusinessMetrics: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/business', { params }),
+  getTimeseries: (params?: AnalyticsRangeParams) => api.get('/admin/analytics/timeseries', { params }),
+};
+
+// ============================================
+// ADMIN MONITORING API (Phase O)
+// ============================================
+export const monitoringApi = {
+  getHealth: () => api.get('/admin/monitoring/health'),
 };
 
 export default api;

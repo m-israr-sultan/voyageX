@@ -38,6 +38,7 @@ import { AuthService } from './modules/services/auth.service';
 import { CoreService } from './modules/services/core.service';
 import { EscrowSchedulerService } from './modules/services/escrow-scheduler.service';
 import { SubscriptionSchedulerService } from './modules/services/subscription-scheduler.service';
+import { BookingDraftCleanupService } from './modules/services/booking-draft-cleanup.service';
 import { EasypaisaProvider } from './modules/payments/providers/easypaisa.provider';
 import { JazzcashProvider } from './modules/payments/providers/jazzcash.provider';
 import { CardProvider } from './modules/payments/providers/card.provider';
@@ -47,13 +48,14 @@ import { EmailService } from './modules/services/email.service';
 import { NotificationService } from './modules/services/notification.service';
 import { QueueService } from './modules/services/queue.service';
 import { WeatherService } from './modules/services/weather.service';
-import { MessagesGateway } from './modules/gateways/messages.gateway';
-import { NotificationsGateway } from './modules/gateways/notifications.gateway';
+import { GatewaysModule } from './modules/gateways/gateways.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AppConfigModule } from './config/app-config.module';
 import { MailModule } from './config/mail.module';
 import { FinancialModule } from './modules/financial/financial.module';
 import { ImagesModule } from './modules/images/images.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { validateEnv } from './config/env.validation';
 import type { EnvConfig } from './config/env.validation';
 
@@ -64,6 +66,9 @@ import type { EnvConfig } from './config/env.validation';
     MailModule,
     FinancialModule,
     ImagesModule,
+    AnalyticsModule,
+    MonitoringModule,
+    GatewaysModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -114,9 +119,8 @@ import type { EnvConfig } from './config/env.validation';
     QueueService,
     WeatherService,
     JwtStrategy,
-    MessagesGateway,
-    NotificationsGateway,
     SubscriptionSchedulerService,
+    BookingDraftCleanupService,
     EasypaisaProvider,
     JazzcashProvider,
     CardProvider,

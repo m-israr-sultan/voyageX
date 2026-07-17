@@ -21,6 +21,8 @@ const ROUTE_POLICIES: { prefix: string; policy: RateLimitPolicy }[] = [
   { prefix: '/api/v1/messages',             policy: { limit: 60,  windowMs: 60_000 } },
   // Reports/disputes — tight
   { prefix: '/api/v1/reports',              policy: { limit: 10,  windowMs: 60_000 } },
+  // Analytics ingestion — generous (fires on every pageview/event per visitor)
+  { prefix: '/api/v1/analytics',            policy: { limit: 240, windowMs: 60_000 } },
 ];
 
 const DEFAULT_POLICY: RateLimitPolicy = { limit: 100, windowMs: 60_000 };

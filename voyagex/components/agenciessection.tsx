@@ -193,15 +193,17 @@ const AgenciesSection = () => {
                 <span className="text-lg font-bold">{agency.packageCount}</span>
               </div>
               <div className="flex flex-row gap-3">
-                <button
-                  onClick={(e) => handleViewPackages(agency, e)}
-                  className="w-1/2 h-[31px] bg-[#008A1E] text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-300 text-sm"
-                >
-                  View Packages
-                </button>
+                {agency.packageCount > 0 && (
+                  <button
+                    onClick={(e) => handleViewPackages(agency, e)}
+                    className="w-1/2 h-[31px] bg-[#008A1E] text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-300 text-sm"
+                  >
+                    View Packages
+                  </button>
+                )}
                 <button
                   onClick={(e) => handleViewDetails(agency, e)}
-                  className="w-1/2 h-[31px] bg-[#E6F4EA] text-black font-medium rounded-lg hover:bg-green-100 transition-colors duration-300 text-sm"
+                  className={`${agency.packageCount > 0 ? "w-1/2" : "w-full"} h-[31px] bg-[#E6F4EA] text-black font-medium rounded-lg hover:bg-green-100 transition-colors duration-300 text-sm`}
                 >
                   View Details
                 </button>

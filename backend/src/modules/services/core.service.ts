@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
+  GoneException,
   Injectable,
   Logger,
   NotFoundException,
@@ -22,7 +24,7 @@ import {
   DisputeStatus,
   NotificationType,
 } from "@prisma/client";
-import { effectiveGuideCommissionRate, PLATFORM_CONFIG } from "../../common/config/platform.config";
+import { effectiveGuideCommissionRate, evaluateCancellationPolicy, PLATFORM_CONFIG } from "../../common/config/platform.config";
 import { AuditService } from "../../common/services/audit.service";
 import { checkMessageSafety, SAFETY_WARNING_PREFIX } from "../../common/utils/message-safety";
 import * as bcrypt from "bcrypt";
@@ -721,16 +723,36 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       this.logger.log(`Duplicate booking detected, returning existing booking: ${duplicate.id}`);
       return duplicate;
     }
+
+    // ------------------------------------------------------------------
+    // DATE AVAILABILITY (Phase G): a guide can only lead one trip at a
+    // time, so overlapping bookings are blocked across ALL of that guide's
+    // packages (direct bookings + guide-owned packages share one calendar).
+    // Agency packages are scoped to that exact package only — agencies can
+    // run multiple concurrent groups, so a booked package doesn't block
+    // other packages from the same agency.
+    // ------------------------------------------------------------------
+    const overlap = await this.findOverlappingBooking(guideId, guideId ? undefined : pkg.id, start, end);
+    if (overlap) {
+      throw new ConflictException(
+        guideId
+          ? 'This guide is already booked for the selected dates. Please choose different dates.'
+          : 'This package is already booked for the selected dates. Please choose different dates.',
+      );
+    }
     
     // Determine booking type and pricing model
     const isGuideBooking = !!body.guideId;
     const commissionRate = isGuideBooking ? effectiveGuideCommissionRate() : 0;
     const commissionAmount = Math.round(totalPrice * commissionRate / 100);
 
-    // Agency bookings are CONFIRMED immediately (direct payment, no escrow needed).
-    // Guide bookings start as PENDING until payment is initiated.
-    const isAgencyBooking = !!pkg.agencyId && !isGuideBooking;
-    const initialStatus = isAgencyBooking ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
+    // PHASE E: every booking — guide or agency package — starts PENDING.
+    // A booking is never auto-CONFIRMED at creation time; initiatePayment()
+    // is what transitions it to CONFIRMED once payment actually succeeds
+    // (immediately for wallet/card in this sandbox, or after admin proof
+    // approval for bank transfer). This keeps "booking exists" and
+    // "payment succeeded" in sync for every booking type.
+    const initialStatus = BookingStatus.PENDING;
 
     // Create booking
     const booking = await this.prisma.bookings.create({
@@ -768,6 +790,238 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
     });
 
     return booking;
+  }
+
+  // ============================================
+  // DATE AVAILABILITY (Phase G)
+  // ============================================
+
+  /** Bookings in these statuses hold a real date range on the calendar. */
+  private static readonly DATE_BLOCKING_STATUSES: BookingStatus[] = [
+    BookingStatus.PENDING,
+    BookingStatus.CONFIRMED,
+    BookingStatus.IN_PROGRESS,
+    BookingStatus.AWAITING_TRAVELER_CONFIRMATION,
+  ];
+
+  /**
+   * Returns the first active booking whose date range overlaps [start, end).
+   * When `guideId` is provided, checks across every package owned by that
+   * guide (a guide can only lead one trip at a time). Otherwise checks the
+   * exact `packageId` only (agency packages support concurrent groups).
+   */
+  private async findOverlappingBooking(
+    guideId: string | undefined,
+    packageId: string | undefined,
+    start: Date,
+    end: Date,
+    excludeBookingId?: string,
+  ) {
+    if (!guideId && !packageId) return null;
+    return this.prisma.bookings.findFirst({
+      where: {
+        ...(excludeBookingId && { id: { not: excludeBookingId } }),
+        status: { in: CoreService.DATE_BLOCKING_STATUSES },
+        startDate: { lt: end },
+        endDate: { gt: start },
+        packages: guideId ? { guideId } : { id: packageId },
+      },
+    });
+  }
+
+  private toDateRanges(bookings: { startDate: Date; endDate: Date }[]) {
+    return bookings.map((b) => ({ startDate: b.startDate, endDate: b.endDate }));
+  }
+
+  /** Public — exposes a guide's booked date ranges for calendars/wizards. */
+  async getGuideAvailability(guideId: string) {
+    await this.prisma.guides.findUniqueOrThrow({ where: { id: guideId } });
+    const bookings = await this.prisma.bookings.findMany({
+      where: {
+        status: { in: CoreService.DATE_BLOCKING_STATUSES },
+        packages: { guideId },
+      },
+      select: { startDate: true, endDate: true },
+      orderBy: { startDate: 'asc' },
+    });
+    return { guideId, unavailableDates: this.toDateRanges(bookings) };
+  }
+
+  /** Public — exposes a package's booked date ranges for calendars/wizards. */
+  async getPackageAvailability(packageId: string) {
+    await this.prisma.packages.findUniqueOrThrow({ where: { id: packageId } });
+    const bookings = await this.prisma.bookings.findMany({
+      where: {
+        status: { in: CoreService.DATE_BLOCKING_STATUSES },
+        packageId,
+      },
+      select: { startDate: true, endDate: true },
+      orderBy: { startDate: 'asc' },
+    });
+    return { packageId, unavailableDates: this.toDateRanges(bookings) };
+  }
+
+  // ============================================
+  // BOOKING DRAFTS / CHECKOUT SESSION (Phase E)
+  // A real `bookings` row is never created until the traveler actually
+  // submits payment. Traveler Details -> Billing steps persist a
+  // server-side draft (price snapshot, expiry) here; only
+  // checkoutBookingDraft() creates the real booking, atomically with
+  // payment initiation.
+  // ============================================
+
+  async createBookingDraft(
+    userId: string,
+    body: {
+      packageId?: string;
+      guideId?: string;
+      startDate: string;
+      endDate: string;
+      groupSize?: number;
+      notes?: string;
+      isInternational?: boolean;
+    },
+  ) {
+    if (!body.packageId && !body.guideId) {
+      throw new BadRequestException('Either packageId or guideId is required');
+    }
+
+    const start = new Date(body.startDate);
+    const end = new Date(body.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestException('Invalid date format. Please use YYYY-MM-DD');
+    }
+    if (end <= start) {
+      throw new BadRequestException('End date must be after start date');
+    }
+    if (start < new Date(new Date().toDateString())) {
+      throw new BadRequestException('Start date cannot be in the past');
+    }
+
+    const groupSize = body.groupSize ?? 1;
+    const priced = await this.calculatePrice({
+      packageId: body.packageId,
+      guideId: body.guideId,
+      startDate: body.startDate,
+      endDate: body.endDate,
+      groupSize,
+    });
+
+    // Resolve the guide that actually owns the calendar being checked —
+    // either a direct guide booking or a guide-owned package.
+    let effectiveGuideId = body.guideId;
+    if (!effectiveGuideId && body.packageId) {
+      const pkg = await this.prisma.packages.findUnique({
+        where: { id: body.packageId },
+        select: { guideId: true, isActive: true },
+      });
+      if (!pkg) throw new NotFoundException('Package not found');
+      if (!pkg.isActive) throw new BadRequestException('Package is not available');
+      effectiveGuideId = pkg.guideId ?? undefined;
+    }
+
+    const overlap = await this.findOverlappingBooking(
+      effectiveGuideId,
+      effectiveGuideId ? undefined : body.packageId,
+      start,
+      end,
+    );
+    if (overlap) {
+      throw new ConflictException(
+        effectiveGuideId
+          ? 'This guide is already booked for the selected dates. Please choose different dates.'
+          : 'This package is already booked for the selected dates. Please choose different dates.',
+      );
+    }
+
+    const now = this.ts();
+    const expiresAt = new Date(now.getTime() + PLATFORM_CONFIG.bookingDraftExpiryMinutes * 60_000);
+
+    const draft = await this.prisma.booking_drafts.create({
+      data: {
+        id: this.uid(),
+        userId,
+        packageId: body.packageId,
+        guideId: body.guideId,
+        startDate: start,
+        endDate: end,
+        groupSize,
+        notes: body.notes,
+        totalPrice: priced.total,
+        pricingModel: priced.pricingModel === 'PER_DAY' ? PricingModel.PER_DAY : PricingModel.PER_PERSON,
+        isInternational: body.isInternational || false,
+        expiresAt,
+        updatedAt: now,
+      },
+    });
+
+    return { ...draft, priceBreakdown: priced };
+  }
+
+  async getBookingDraft(id: string, userId: string) {
+    const draft = await this.prisma.booking_drafts.findUnique({ where: { id } });
+    if (!draft || draft.userId !== userId) {
+      throw new NotFoundException('Booking draft not found or expired');
+    }
+    if (draft.expiresAt <= this.ts()) {
+      await this.prisma.booking_drafts.delete({ where: { id } }).catch(() => undefined);
+      throw new GoneException('This checkout session has expired. Please start booking again.');
+    }
+    return draft;
+  }
+
+  /**
+   * The ONLY place a real booking + payment come into existence for the
+   * standard in-app checkout flow. Creates the booking and immediately
+   * initiates payment in one atomic action — if payment initiation fails
+   * for any reason, the just-created booking is rolled back so no
+   * unpaid "ghost" booking is ever left behind.
+   */
+  async checkoutBookingDraft(
+    id: string,
+    userId: string,
+    paymentDto: {
+      paymentMethod: PaymentMethod;
+      mobileNumber?: string;
+      cardToken?: string;
+      bankReference?: string;
+      proofUrl?: string;
+    },
+  ) {
+    const draft = await this.getBookingDraft(id, userId);
+
+    const booking = await this.createBooking(userId, {
+      packageId: draft.packageId ?? undefined,
+      guideId: draft.guideId ?? undefined,
+      startDate: draft.startDate.toISOString(),
+      endDate: draft.endDate.toISOString(),
+      groupSize: draft.groupSize,
+      notes: draft.notes ?? undefined,
+      isInternational: draft.isInternational,
+    });
+
+    try {
+      const payment = await this.initiatePayment(userId, {
+        bookingId: booking.id,
+        amount: booking.totalPrice,
+        paymentMethod: paymentDto.paymentMethod,
+        mobileNumber: paymentDto.mobileNumber,
+        cardToken: paymentDto.cardToken,
+        bankReference: paymentDto.bankReference,
+        proofUrl: paymentDto.proofUrl,
+      });
+
+      await this.prisma.booking_drafts.delete({ where: { id } }).catch(() => undefined);
+
+      return { ...payment, bookingId: booking.id };
+    } catch (error) {
+      // Payment initiation failed — the booking must not exist without a
+      // successful (or pending-review) payment behind it. Roll it back.
+      if (booking.id) {
+        await this.prisma.bookings.delete({ where: { id: booking.id } }).catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   // ============================================
@@ -924,11 +1178,43 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       this.triggerPaymentCompletion(payment.id);
     }
 
+    // PHASE F/I: auto-confirmation requires no guide/agency approval — the
+    // booking is already CONFIRMED by the update above; this just notifies
+    // both sides that payment succeeded and the booking is locked in.
+    if (bookingUpdateData.status === BookingStatus.CONFIRMED) {
+      await this.notifyBookingConfirmedIfNeeded(dto.bookingId);
+    }
+
     return {
       ...payment,
       providerMessage: providerResult.message,
       redirectUrl: providerResult.redirectUrl,
     };
+  }
+
+  /**
+   * PHASE I: notifies both the traveler and the seller (guide or agency)
+   * once a booking has actually been CONFIRMED by a successful payment.
+   * No-op for any other status — this is intentionally safe to call from
+   * every code path that might transition a booking to CONFIRMED.
+   */
+  private async notifyBookingConfirmedIfNeeded(bookingId: string): Promise<void> {
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: bookingId },
+      include: { packages: { include: { guides: true, agencies: true } } },
+    });
+    if (!booking || booking.status !== BookingStatus.CONFIRMED) return;
+
+    const sellerUserId = booking.packages.guides?.userId ?? booking.packages.agencies?.userId;
+    if (!sellerUserId) return;
+
+    await this.notificationService.notifyBookingConfirmed(
+      bookingId,
+      booking.userId,
+      sellerUserId,
+      booking.packages.title,
+      booking.totalPrice,
+    );
   }
 
   private triggerPaymentCompletion(paymentId: string): void {
@@ -978,6 +1264,11 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       `Your bank transfer payment has been verified. Your booking is now confirmed.`,
       { bookingId: payment.bookingId, paymentId },
     );
+
+    // PHASE F/I: notify the seller too — bank-transfer bookings only reach
+    // CONFIRMED via this admin approval, so this is the only place that
+    // transition happens for that payment method.
+    await this.notifyBookingConfirmedIfNeeded(payment.bookingId);
 
     this.audit.log({
       action: 'payment.proof_approved',
@@ -1046,7 +1337,7 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
   async cancelBooking(id: string, userId: string, role: UserRole) {
     const booking = await this.prisma.bookings.findUniqueOrThrow({
       where: { id },
-      include: { packages: { include: { guides: true } } },
+      include: { packages: { include: { guides: true, agencies: true } }, payments: true },
     });
 
     const isOwner = booking.userId === userId;
@@ -1069,6 +1360,20 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       );
     }
 
+    // CANCELLATION POLICY (Phase K): admins may override the "trip already
+    // started" block (e.g. to resolve a dispute); the refund percentage
+    // itself is never changed by the override — admins adjust refunds
+    // manually afterwards via the existing refund tools if needed.
+    const policy = evaluateCancellationPolicy(
+      booking.createdAt,
+      booking.startDate,
+      this.ts(),
+      isAdmin,
+    );
+    if (!policy.allowed) {
+      throw new BadRequestException(policy.reason);
+    }
+
     const updated = await this.prisma.bookings.update({
       where: { id },
       data: { status: BookingStatus.CANCELLED, updatedAt: this.ts() },
@@ -1080,8 +1385,39 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       actorRole: role,
       resourceType: 'booking',
       resourceId: id,
-      metadata: { previousStatus: booking.status },
+      metadata: { previousStatus: booking.status, refundPercent: policy.refundPercent, refundReason: policy.reason },
     });
+
+    // Only money actually captured (HELD) is eligible for a refund —
+    // PENDING_REVIEW bank-transfer proofs that were never approved hold no
+    // funds, so there is nothing to refund.
+    if (booking.payments && booking.payments.status === PaymentStatus.HELD && policy.refundPercent > 0) {
+      const refundAmount = Math.round((booking.payments.amount * policy.refundPercent) / 100);
+      if (refundAmount > 0) {
+        try {
+          await this.refundOrchestration.initiateAdminRefund(
+            userId,
+            booking.payments.id,
+            refundAmount,
+            `Booking cancellation (${policy.refundPercent}% refund): ${policy.reason}`,
+          );
+        } catch (error: unknown) {
+          this.logger.error(
+            `Cancellation refund failed for booking=${id}: ${error instanceof Error ? error.message : 'unknown'}`,
+          );
+        }
+      }
+    }
+
+    const sellerUserId = booking.packages.guides?.userId ?? booking.packages.agencies?.userId;
+    if (sellerUserId) {
+      await this.notificationService.notifyBookingCancelled(
+        id,
+        booking.userId,
+        sellerUserId,
+        booking.packages.title,
+      );
+    }
 
     return updated;
   }
@@ -1223,6 +1559,12 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
       booking.packages.guides?.userId || "",
       `${traveler?.firstName || "Traveler"} ${traveler?.lastName || ""}`,
       guidePayout
+    );
+
+    await this.notificationService.notifyBookingCompleted(
+      id,
+      booking.userId,
+      booking.packages.title,
     );
 
     const auditAction = releaseSource === ReleaseSource.AUTO_RELEASE
@@ -1751,16 +2093,87 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
     });
   }
 
-  conversationMessages(id: string, userId: string, isAdmin: boolean) {
-    return this.prisma.messages.findMany({
+  // Returns the conversation's participants (flattened with guide/agency
+  // profile fields the frontend reads directly — slug, avatar/logo, rating,
+  // pricePerDay, etc.) plus its messages in chronological order. The
+  // frontend derives the "recipient" as the participant who is NOT the
+  // current user, so this must always include every participant's real
+  // role/avatar — never fall back to a bare message array (which is what
+  // caused the conversation header to lose the recipient's avatar/role).
+  async conversationMessages(id: string, userId: string, isAdmin: boolean) {
+    const conversation = await this.prisma.conversations.findFirst({
       where: {
-        conversationId: id,
-        ...(isAdmin
-          ? {}
-          : { conversations: { users: { some: { id: userId } } } }),
+        id,
+        ...(isAdmin ? {} : { users: { some: { id: userId } } }),
       },
-      include: { users: true },
+      include: {
+        users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            avatar: true,
+            guides: { select: { slug: true, pricePerDay: true, rating: true, location: true } },
+            agencies: {
+              select: {
+                slug: true,
+                name: true,
+                logo: true,
+                isVerified: true,
+                city: true,
+                country: true,
+                rating: true,
+                _count: { select: { packages: true } },
+              },
+            },
+          },
+        },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            users: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          },
+        },
+      },
     });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const users = conversation.users.map((participant) => {
+      const { guides, agencies, ...base } = participant;
+      if (agencies) {
+        return {
+          ...base,
+          name: agencies.name,
+          logo: agencies.logo,
+          slug: agencies.slug,
+          isVerified: agencies.isVerified,
+          city: agencies.city,
+          country: agencies.country,
+          rating: agencies.rating,
+          totalPackages: agencies._count?.packages ?? 0,
+        };
+      }
+      if (guides) {
+        return {
+          ...base,
+          slug: guides.slug,
+          pricePerDay: guides.pricePerDay,
+          rating: guides.rating,
+          location: guides.location,
+        };
+      }
+      return base;
+    });
+
+    // Frontend reads `message.read` (not the Prisma field name `isRead`).
+    const messages = conversation.messages.map((m) => ({ ...m, read: m.isRead }));
+
+    return { id: conversation.id, users, messages };
   }
 
   async sendMessage(
@@ -1769,7 +2182,7 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
   ) {
     const conv = await this.prisma.conversations.findUniqueOrThrow({
       where: { id: body.conversationId },
-      include: { users: { select: { id: true } } },
+      include: { users: { select: { id: true, firstName: true, lastName: true } } },
     });
     if (!conv.users.some((u) => u.id === userId))
       throw new ForbiddenException("Not a participant");
@@ -1805,6 +2218,23 @@ async updateMyAgencyProfile(userId: string, body: UpdateAgencyProfileDto) {
         },
       });
     }
+
+    // PHASE I: notify the other participant(s) that a new message arrived.
+    const sender = conv.users.find((u) => u.id === userId);
+    const senderName = sender ? `${sender.firstName} ${sender.lastName}`.trim() : 'Someone';
+    const preview = body.content.length > 80 ? `${body.content.slice(0, 80)}…` : body.content;
+    const recipients = conv.users.filter((u) => u.id !== userId);
+    await Promise.all(
+      recipients.map((recipient) =>
+        this.notificationService.createNotification(
+          recipient.id,
+          NotificationType.NEW_MESSAGE,
+          'New Message',
+          `${senderName}: ${preview}`,
+          { conversationId: body.conversationId, messageId: message.id },
+        ),
+      ),
+    );
 
     return message;
   }

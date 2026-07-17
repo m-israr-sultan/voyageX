@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FaCreditCard, FaMobileAlt, FaWallet, FaCheckCircle, FaLock, FaBuilding, FaInfoCircle, FaCloudUploadAlt } from "react-icons/fa";
-import { paymentsApi, uploadApi } from "@/lib/api";
+import { bookingsApi, uploadApi } from "@/lib/api";
 import { extractUploadPath } from "@/lib/image-utils";
 import type { PaymentMethodType } from "@/lib/types/payment.types";
 
@@ -9,7 +9,8 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   bookingData: {
-    bookingId?: string;
+    /** BookingDraft id (Phase E) — no real booking exists until checkout succeeds. */
+    draftId?: string;
     totalAmount?: number;
     packageId?: string;
     packageName?: string;
@@ -20,7 +21,8 @@ interface PaymentModalProps {
     duration?: number;
     bookingType?: string;
   };
-  onSuccess: (...args: unknown[]) => void;
+  /** Called with the real booking id once payment succeeds (or is submitted for bank-transfer review). */
+  onSuccess: (bookingId?: string) => void;
 }
 
 /**
@@ -76,6 +78,7 @@ export default function PaymentModal({ isOpen, onClose, bookingData, onSuccess }
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | undefined>(undefined);
 
   const paymentMethods = [
     { id: "easypaisa", name: "EasyPaisa", icon: FaMobileAlt, color: "#00B050", description: "Pay via EasyPaisa mobile wallet" },
@@ -142,27 +145,35 @@ export default function PaymentModal({ isOpen, onClose, bookingData, onSuccess }
       return;
     }
 
+    if (!bookingData.draftId) {
+      setError("Checkout session missing. Please restart the booking.");
+      setStep("details");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
     setStep("processing");
 
     try {
-      await paymentsApi.initiate({
-        bookingId: bookingData.bookingId ?? "",
+      // PHASE E: creates the real booking AND initiates payment atomically
+      // on the backend — no booking exists until this call succeeds.
+      const res = await bookingsApi.checkoutDraft(bookingData.draftId, {
         paymentMethod: METHOD_MAP[selectedMethod],
-        amount: bookingData.totalAmount ?? 0,
         ...(mobileNumber && { mobileNumber }),
         ...(cardToken && { cardToken }),
         ...(bankReference && { bankReference }),
         ...(proofUrl && { proofUrl }),
       });
+      const bookingId = res.data?.data?.bookingId || res.data?.bookingId;
 
       if (selectedMethod === "bank") {
         setStep("pending_review");
+        setPendingBookingId(bookingId);
       } else {
         setStep("success");
         setTimeout(() => {
-          onSuccess();
+          onSuccess(bookingId);
           onClose();
         }, 2000);
       }
@@ -400,7 +411,7 @@ export default function PaymentModal({ isOpen, onClose, bookingData, onSuccess }
         You will be notified within 24 hours.
       </p>
       <button
-        onClick={() => { onSuccess(); onClose(); }}
+        onClick={() => { onSuccess(pendingBookingId); onClose(); }}
         className="mt-6 px-6 py-2 bg-[#008A1E] text-white rounded-lg hover:bg-[#006816] transition-colors"
       >
         OK

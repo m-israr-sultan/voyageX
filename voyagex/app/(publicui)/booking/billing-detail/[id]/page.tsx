@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -18,6 +18,7 @@ import Footer from "@/components/footer";
 import PaymentModal from "@/components/paymentmodal";
 import { bookingsApi } from "@/lib/api";
 import { isLoggedIn } from "@/lib/auth";
+import { trackEventOnUnload } from "@/lib/analytics-client";
 
 export default function BillingDetailsPage() {
   const router = useRouter();
@@ -28,10 +29,28 @@ export default function BillingDetailsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState("");
   const [creatingBooking, setCreatingBooking] = useState(false);
-  const [existingBookingId, setExistingBookingId] = useState<string | null>(null);
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
   const [showInternationalWarning, setShowInternationalWarning] = useState(false);
+  const [draftExpired, setDraftExpired] = useState(false);
 
   const DRAFT_KEY = `booking_draft_${params.id}`;
+  const draftId = searchParams.get("draftId") || "";
+  const paymentSucceededRef = useRef(false);
+
+  // PHASE — event tracking: fires a best-effort "abandoned checkout" signal
+  // if the traveler leaves this page (closes tab/navigates away) before
+  // completing payment. Never fires once payment has actually succeeded.
+  useEffect(() => {
+    if (!draftId) return;
+    const type = searchParams.get("type") || "package";
+    const itemId = searchParams.get("itemId") || (params.id as string);
+    const handlePageHide = () => {
+      if (paymentSucceededRef.current) return;
+      trackEventOnUnload("BOOKING_ABANDONED", type === "guide" ? "guide" : "package", itemId, { draftId });
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [draftId, searchParams, params.id]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -42,124 +61,91 @@ export default function BillingDetailsPage() {
     const type = searchParams.get("type") || "package";
     const itemId = searchParams.get("itemId") || params.id;
     const itemName = searchParams.get("itemName") || "";
-    const duration = parseInt(searchParams.get("duration") || "1");
-    const startDate = searchParams.get("startDate") || "";
-    const endDate = searchParams.get("endDate") || "";
-    const travelers = parseInt(searchParams.get("travelers") || "1");
-    const notes = searchParams.get("notes") || "";
     const image = searchParams.get("image") || "/agency-placeholder.jpg";
 
-    // Restore payment method selection from sessionStorage after reconnect
     const savedMethod = sessionStorage.getItem(`${DRAFT_KEY}_method`);
     if (savedMethod) setSelectedMethod(savedMethod);
 
-    const fetchPrice = async () => {
+    const fetchDraft = async () => {
+      if (!draftId) {
+        setBookingInfo(null);
+        setLoading(false);
+        return;
+      }
       try {
-        const priceRes = await bookingsApi.calculatePrice({
-          packageId: type === "package" ? (itemId as string) : undefined,
-          guideId: type === "guide" ? (itemId as string) : undefined,
-          startDate,
-          endDate,
-          groupSize: travelers,
-        });
-        const priceData = priceRes.data?.data || priceRes.data;
-        const backendTotal = priceData?.total ?? priceData?.basePrice ?? 0;
-        const backendPrice = priceData?.pricePerPerson ?? priceData?.pricePerDay ?? 0;
+        // Authoritative source of truth — a server-persisted checkout
+        // session (Phase E). No real booking exists yet; this is just the
+        // price snapshot + selected dates the traveler is about to pay for.
+        const draftRes = await bookingsApi.getDraft(draftId);
+        const draft = draftRes.data?.data || draftRes.data;
 
+        const duration = Math.max(1, Math.ceil(
+          (new Date(draft.endDate).getTime() - new Date(draft.startDate).getTime()) / (1000 * 60 * 60 * 24)
+        ));
         const info = {
           type,
           itemId,
           itemName,
-          price: backendPrice,
+          price: draft.pricingModel === "PER_DAY"
+            ? Math.round(draft.totalPrice / duration)
+            : Math.round(draft.totalPrice / (draft.groupSize || 1)),
           duration,
-          startDate,
-          endDate,
-          travelers,
-          notes,
+          startDate: draft.startDate,
+          endDate: draft.endDate,
+          travelers: draft.groupSize,
+          notes: draft.notes || "",
           image,
-          total: backendTotal,
-          pricingModel: type === "guide" ? "PER_DAY" : "PER_PERSON",
+          total: draft.totalPrice,
+          pricingModel: draft.pricingModel,
         };
         setBookingInfo(info);
-        // Persist booking context so reconnect can restore it
         try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(info)); } catch {}
-      } catch {
-        // Try to restore from sessionStorage if backend is unreachable
-        try {
-          const cached = sessionStorage.getItem(DRAFT_KEY);
-          if (cached) setBookingInfo(JSON.parse(cached));
-          else setBookingInfo(null);
-        } catch { setBookingInfo(null); }
+      } catch (err: any) {
+        if (err.response?.status === 410 || err.response?.status === 404) {
+          setDraftExpired(true);
+          setBookingInfo(null);
+        } else {
+          // Transient network issue — fall back to the last cached snapshot
+          try {
+            const cached = sessionStorage.getItem(DRAFT_KEY);
+            if (cached) setBookingInfo(JSON.parse(cached));
+            else setBookingInfo(null);
+          } catch { setBookingInfo(null); }
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPrice();
-  }, [searchParams, params.id, router]);
-
-  const createBooking = async () => {
-    if (existingBookingId) return existingBookingId;
-    
-    setCreatingBooking(true);
-    try {
-      const response = await bookingsApi.create({
-        packageId: bookingInfo.type === "package" ? bookingInfo.itemId : undefined,
-        guideId: bookingInfo.type === "guide" ? bookingInfo.itemId : undefined,
-        startDate: bookingInfo.startDate,
-        endDate: bookingInfo.endDate,
-        groupSize: bookingInfo.travelers,
-        notes: bookingInfo.notes,
-      });
-      
-      const result = response.data;
-      if (result.success && result.data) {
-        const bookingId = result.data.id;
-        setExistingBookingId(bookingId);
-        return bookingId;
-      }
-      throw new Error("Failed to create booking");
-    } catch (err: any) {
-      console.error("Error creating booking:", err);
-      // If duplicate booking, try to extract existing booking ID from error
-      if (err.response?.data?.data?.id) {
-        setExistingBookingId(err.response.data.data.id);
-        return err.response.data.data.id;
-      }
-      throw err;
-    } finally {
-      setCreatingBooking(false);
-    }
-  };
+    fetchDraft();
+  }, [searchParams, params.id, router, draftId]);
 
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  const handleMethodSelect = async (methodId: string) => {
+  // PHASE E: no booking is created here. Selecting a method just opens the
+  // payment form — the real booking is only created, atomically with
+  // payment, when the traveler actually submits payment (see PaymentModal's
+  // checkout call against POST /bookings/drafts/:id/checkout).
+  const handleMethodSelect = (methodId: string) => {
     setSelectedMethod(methodId);
-    // Persist selection — survives page refresh if connection drops
     try { sessionStorage.setItem(`${DRAFT_KEY}_method`, methodId); } catch {}
     setBookingError(null);
-    
-    try {
-      const bookingId = await createBooking();
-      if (bookingId) {
-        setShowPaymentModal(true);
-      }
-    } catch (err: any) {
-      console.error("Error preparing booking:", err);
-      setBookingError(err.response?.data?.message || "Failed to prepare booking. Please try again.");
-    }
+    setShowPaymentModal(true);
   };
 
-  const handlePaymentSuccess = () => {
-    // Clear draft on successful booking
+  const handlePaymentSuccess = (bookingId?: string) => {
+    paymentSucceededRef.current = true;
     try { sessionStorage.removeItem(DRAFT_KEY); sessionStorage.removeItem(`${DRAFT_KEY}_method`); } catch {}
-    router.push(`/booking/confirmation/${existingBookingId}`);
+    router.push(`/booking/confirmation/${bookingId || confirmedBookingId || ""}`);
   };
 
   const handleInternationalBooking = async () => {
-    // Create a booking record BEFORE opening WhatsApp so the admin can track it
-    let bookingId = existingBookingId;
+    // International bookings bypass in-app payment entirely (admin-assisted
+    // via WhatsApp) — a real booking record is intentionally created here
+    // immediately so the admin has something to track before contacting the
+    // traveler. This is a deliberately different flow from the in-app
+    // checkout above, which never creates a booking before payment.
+    let bookingId = confirmedBookingId;
     if (!bookingId) {
       try {
         setCreatingBooking(true);
@@ -175,12 +161,14 @@ export default function BillingDetailsPage() {
         const result = response.data;
         if (result.success && result.data) {
           bookingId = result.data.id;
-          setExistingBookingId(bookingId!);
+          setConfirmedBookingId(bookingId!);
+          paymentSucceededRef.current = true; // admin-assisted booking created — not an abandonment
         }
       } catch (err: any) {
         if (err.response?.data?.data?.id) {
           bookingId = err.response.data.data.id;
-          setExistingBookingId(bookingId!);
+          setConfirmedBookingId(bookingId!);
+          paymentSucceededRef.current = true;
         } else {
           console.error("Failed to create international booking:", err);
           // Proceed with WhatsApp even if booking creation failed
@@ -227,7 +215,12 @@ export default function BillingDetailsPage() {
       <div className="min-h-screen bg-[#F2F4F7]">
         <Navbar />
         <div className="text-center py-20">
-          <h1 className="text-2xl font-bold text-gray-800">No booking information found</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {draftExpired ? "Your checkout session has expired" : "No booking information found"}
+          </h1>
+          <p className="text-gray-500 mt-2">
+            {draftExpired ? "Please select your dates again to start a new checkout." : ""}
+          </p>
           <button onClick={() => router.back()} className="mt-4 text-[#008A1E] hover:underline">Go Back</button>
         </div>
       </div>
@@ -458,12 +451,12 @@ export default function BillingDetailsPage() {
 
       <Footer />
 
-      {showPaymentModal && existingBookingId && (
+      {showPaymentModal && draftId && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           bookingData={{
-            bookingId: existingBookingId,
+            draftId,
             totalAmount: bookingInfo.total,
           }}
           onSuccess={handlePaymentSuccess}

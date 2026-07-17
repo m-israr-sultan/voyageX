@@ -112,6 +112,14 @@ export class GuidesController {
     return this.core.guides();
   }
 
+  // Phase G — booked date ranges for a guide, used by the booking wizard
+  // and public guide/package pages to block overlapping dates.
+  @Get(':id/availability')
+  @Public()
+  availability(@Param('id') id: string) {
+    return this.core.getGuideAvailability(id);
+  }
+
   @Get(':slug')
   @Public()
   get(@Param('slug') slug: string) {

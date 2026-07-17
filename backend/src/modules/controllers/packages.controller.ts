@@ -25,5 +25,10 @@ export class PackagesController {
   @Delete(':id') @Roles(UserRole.GUIDE, UserRole.AGENCY, UserRole.ADMIN)
   remove(@Param('id') id: string, @Query('hard') hard?: string) { return this.core.deletePackage(id, hard === 'true'); }
 
+  // Phase G — booked date ranges for a package, used by the booking wizard
+  // and public pages to block overlapping dates.
+  @Get(':id/availability') @Public()
+  availability(@Param('id') id: string) { return this.core.getPackageAvailability(id); }
+
   @Get(':slug') @Public() get(@Param('slug') slug: string) { return this.core.packageBySlug(slug); }
 }
