@@ -169,7 +169,7 @@ export default function MonitoringPage() {
           {/* Background jobs */}
           <div className="bg-white border rounded-xl p-4 sm:p-5">
             <h2 className="font-semibold text-gray-900 mb-4">Background Jobs (last 24h)</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
               {Object.entries(health.backgroundJobs?.webhooks?.last24h ?? {}).map(([key, value]) => (
                 <div key={key} className="text-center p-3 border rounded-lg">
                   <p className="text-lg font-semibold text-gray-900">{value as number}</p>

@@ -272,8 +272,8 @@ export default function GuideProfilePage() {
   // If no profile exists (new guide)
   if (!profile) {
     return (
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-[1400px] mx-auto">
-        <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl border border-gray-200 p-8 text-center">
+      <div className="w-full space-y-6">
+        <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <FaUser className="w-10 h-10 text-green-600" />
           </div>
@@ -293,7 +293,7 @@ export default function GuideProfilePage() {
   }
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-[1400px] mx-auto">
+    <div className="w-full space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">My Profile</h1>

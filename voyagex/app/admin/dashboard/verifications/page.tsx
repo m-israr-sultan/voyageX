@@ -157,14 +157,14 @@ export default function AdminVerificationsPage() {
         ) : (
           <div className="divide-y divide-gray-50">
             {filteredDocs.map((doc) => (
-              <div key={doc.id} className="px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div key={doc.id} className="px-3 sm:px-5 py-4 hover:bg-gray-50/50 transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">
                       📎
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
                         <span className="text-sm font-medium text-gray-900">
                           {getDocumentTypeLabel(doc.type)}
                         </span>
@@ -175,14 +175,14 @@ export default function AdminVerificationsPage() {
                       <p className="text-sm text-gray-600">
                         {doc.users?.firstName} {doc.users?.lastName}
                       </p>
-                      <p className="text-xs text-gray-400">{doc.users?.email}</p>
+                      <p className="text-xs text-gray-400 break-all">{doc.users?.email}</p>
                       {doc.fileName && (
-                        <p className="text-xs text-gray-400 mt-0.5">📎 {doc.fileName}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">📎 {doc.fileName}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 sm:ml-4 w-full sm:w-auto">
                     <button
                       onClick={() => setSelectedDoc(doc)}
                       className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors flex items-center gap-1"
@@ -208,7 +208,7 @@ export default function AdminVerificationsPage() {
       {/* Document Preview Modal */}
       {selectedDoc && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg shadow-xl">
+          <div className="bg-white rounded-lg w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="px-5 py-3.5 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900 text-sm">

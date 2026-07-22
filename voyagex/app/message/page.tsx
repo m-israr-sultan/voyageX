@@ -108,24 +108,24 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F4F7]">
+    <div className="min-h-screen bg-[#F2F4F7] overflow-x-hidden">
       <Navbar />
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700">
+      <main className="max-w-3xl mx-auto px-3 min-[375px]:px-4 py-6 sm:py-8">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6 min-w-0">
+          <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 p-1 shrink-0" aria-label="Back">
             <FaArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Messages</h1>
           {conversations.length > 0 && (
             <span className="text-sm text-gray-500">{conversations.length} conversation{conversations.length > 1 ? 's' : ''}</span>
           )}
         </div>
 
         {conversations.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-            <FaEnvelope className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <div className="text-center py-12 sm:py-16 bg-white rounded-xl shadow-sm px-4">
+            <FaEnvelope className="w-14 h-14 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-700">No conversations yet</h3>
-            <p className="text-gray-500 mt-1">When you message a guide or agency, your conversations will appear here</p>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">When you message a guide or agency, your conversations will appear here</p>
             <button
               onClick={() => router.push("/guide")}
               className="mt-6 px-6 py-3 bg-[#008A1E] text-white rounded-xl hover:bg-[#006816] transition-colors"
@@ -134,16 +134,16 @@ export default function ConversationsPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1 bg-white rounded-xl overflow-hidden shadow-sm">
             {conversations.map((conv) => {
               const unread = hasUnread(conv);
               return (
                 <button
                   key={conv.id}
                   onClick={() => router.push(`/message/${conv.id}`)}
-                  className={`w-full bg-white p-4 hover:bg-gray-50 transition-colors flex items-center gap-4 text-left border-b border-gray-100 last:border-b-0 rounded-lg ${unread ? 'bg-blue-50/50' : ''}`}
+                  className={`w-full p-3 sm:p-4 hover:bg-gray-50 transition-colors flex items-center gap-3 sm:gap-4 text-left border-b border-gray-100 last:border-b-0 ${unread ? 'bg-blue-50/50' : ''}`}
                 >
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                  <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                     <Image
                       src={getRecipientImage(conv)}
                       alt={getRecipientName(conv)}
@@ -156,12 +156,12 @@ export default function ConversationsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`${unread ? 'font-bold' : 'font-semibold'} text-gray-900`}>
+                    <div className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                        <span className={`${unread ? 'font-bold' : 'font-semibold'} text-gray-900 truncate`}>
                           {getRecipientName(conv)}
                         </span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
                           getRecipientRole(conv) === "AGENCY" 
                             ? "bg-purple-100 text-purple-700" 
                             : getRecipientRole(conv) === "Guide"
@@ -171,7 +171,7 @@ export default function ConversationsPage() {
                           {getRecipientRole(conv)}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400">{getLastMessageTime(conv)}</span>
+                      <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{getLastMessageTime(conv)}</span>
                     </div>
                     <p className={`text-sm mt-1 truncate ${unread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
                       {getLastMessage(conv)}

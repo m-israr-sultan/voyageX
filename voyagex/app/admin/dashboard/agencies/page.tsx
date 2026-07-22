@@ -105,8 +105,53 @@ export default function AdminAgenciesPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        {/* Mobile cards */}
+        <div className="block sm:hidden divide-y divide-gray-100">
+          {filteredAgencies.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-gray-400">No agencies found</div>
+          ) : (
+            filteredAgencies.map((agency) => (
+              <div key={agency.id} className="p-4 space-y-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
+                    <img src={agency.logo ? getImageUrl(agency.logo) : "/agency-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">{agency.name || "Unknown"}</p>
+                    <p className="text-xs text-gray-500 break-all">{agency.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <FaMapMarkerAlt className="w-3 h-3 text-green-500" />{agency.city || agency.country || "N/A"}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <FaBriefcase className="w-3 h-3 text-purple-500" />{agency._count?.packages || 0}
+                  </span>
+                  {renderStars(agency.rating || 0)}
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${agency.isVerified ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
+                    {agency.isVerified ? "Verified" : "Unverified"}
+                  </span>
+                </div>
+                {agency.isVerified ? (
+                  <button onClick={() => handleUnverify(agency.id)} disabled={actionLoading === agency.id}
+                    className="w-full px-3 py-2 bg-yellow-50 text-yellow-700 rounded-md text-xs font-medium disabled:opacity-50 flex items-center justify-center gap-1">
+                    {actionLoading === agency.id ? <FaSpinner className="w-3 h-3 animate-spin" /> : <FaTimesCircle className="w-3 h-3" />}Unverify
+                  </button>
+                ) : (
+                  <button onClick={() => handleVerify(agency.id)} disabled={actionLoading === agency.id}
+                    className="w-full px-3 py-2 bg-green-50 text-green-700 rounded-md text-xs font-medium disabled:opacity-50 flex items-center justify-center gap-1">
+                    {actionLoading === agency.id ? <FaSpinner className="w-3 h-3 animate-spin" /> : <FaCheckCircle className="w-3 h-3" />}Verify
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">Agency</th>
@@ -124,13 +169,13 @@ export default function AdminAgenciesPage() {
                 filteredAgencies.map((agency) => (
                   <tr key={agency.id} className="hover:bg-gray-50/50">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0">
                           <img src={agency.logo ? getImageUrl(agency.logo) : "/agency-placeholder.jpg"} alt="" className="w-8 h-8 object-cover rounded-full" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{agency.name || "Unknown"}</p>
-                          <p className="text-xs text-gray-400">{agency.email}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{agency.name || "Unknown"}</p>
+                          <p className="text-xs text-gray-400 break-all">{agency.email}</p>
                         </div>
                       </div>
                     </td>

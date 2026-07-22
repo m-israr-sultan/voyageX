@@ -703,7 +703,7 @@ export default function AgencyProfilePage() {
           {!editing && galleryImages.filter(Boolean).length > 0 && (
             <div className="mt-8">
               <label className="block text-sm font-medium text-gray-700 mb-3">Gallery</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 min-[375px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {galleryImages.filter(Boolean).map((img, idx) => {
                   const resolvedImg = getImageUrl(img);
                   return (

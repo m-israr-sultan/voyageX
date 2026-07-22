@@ -111,19 +111,19 @@ export default function AdminProfilePage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
         {!editing ? (
           <button
             onClick={() => setEditing(true)}
-            className="px-4 py-2 bg-[#008A1E] text-white rounded-md text-sm hover:bg-[#006816]"
+            className="w-full sm:w-auto px-4 py-2 bg-[#008A1E] text-white rounded-md text-sm hover:bg-[#006816]"
           >
             Edit
           </button>
         ) : (
           <button
             onClick={() => setEditing(false)}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
           >
             Cancel
           </button>

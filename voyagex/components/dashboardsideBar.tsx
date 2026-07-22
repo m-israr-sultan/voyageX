@@ -144,9 +144,10 @@ export default function DashboardSideBar({ role, basePath, isOpen = false, onClo
       )}
 
       <aside
-        className={`w-64 bg-white border-r border-gray-200 h-screen fixed left-0 top-0 overflow-y-auto z-50 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 lg:z-30 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`w-[min(16rem,85vw)] sm:w-64 bg-white border-r border-gray-200 h-[100dvh] h-screen fixed left-0 top-0 overflow-y-auto overscroll-contain z-50 flex flex-col transition-transform duration-300 ease-in-out will-change-transform lg:translate-x-0 lg:z-30 ${
+          isOpen ? "translate-x-0 shadow-xl lg:shadow-none" : "-translate-x-full"
         }`}
+        aria-label={`${getPanelTitle()} navigation`}
       >
         <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>

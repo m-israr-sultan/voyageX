@@ -92,10 +92,10 @@ export default function AdminReportsPage() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen">
-        <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/Home.png')" }} />
-        <div className="fixed inset-0 bg-black/60" />
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
+      <div className="relative -mx-3 min-[375px]:-mx-4 sm:-mx-6 -mt-3 min-[375px]:-mt-4 sm:-mt-6 min-h-[calc(100dvh-3.5rem)] overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/Home.png')" }} />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 flex items-center justify-center min-h-[50vh]">
           <FaSpinner className="w-8 h-8 text-white animate-spin" />
         </div>
       </div>
@@ -103,29 +103,29 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/Home.png')" }} />
-      <div className="fixed inset-0 bg-black/60" />
+    <div className="relative -mx-3 min-[375px]:-mx-4 sm:-mx-6 -mt-3 min-[375px]:-mt-4 sm:-mt-6 min-h-[calc(100dvh-3.5rem)] overflow-x-hidden">
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/Home.png')" }} />
+      <div className="absolute inset-0 bg-black/60" />
 
-      <div className="relative z-10 space-y-6">
+      <div className="relative z-10 space-y-4 sm:space-y-6 p-3 min-[375px]:p-4 sm:p-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">Reports</h1>
-          <p className="text-white/70 mt-1">Review and manage user reports</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Reports</h1>
+          <p className="text-white/70 mt-1 text-sm sm:text-base">Review and manage user reports</p>
         </div>
 
         {error && (
-          <div className="p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/50 text-red-200 rounded-lg text-sm">{error}</div>
+          <div className="p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/50 text-red-200 rounded-lg text-sm break-words">{error}</div>
         )}
 
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1 relative min-w-0">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 w-4 h-4" />
               <input type="text" placeholder="Search reports..." value={search} onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+              className="w-full sm:w-auto px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500">
               <option value="ALL" className="bg-gray-800">All Status</option>
               <option value="PENDING" className="bg-gray-800">Pending</option>
               <option value="REVIEWING" className="bg-gray-800">Reviewing</option>
@@ -137,34 +137,34 @@ export default function AdminReportsPage() {
 
         <div className="space-y-4">
           {filteredReports.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-12 text-center">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 sm:p-12 text-center">
               <FaExclamationTriangle className="w-12 h-12 text-white/20 mx-auto mb-3" />
               <p className="text-white/50">No reports found</p>
             </div>
           ) : (
             filteredReports.map((report) => (
-              <div key={report.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 hover:bg-white/15 transition-all">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+              <div key={report.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 sm:p-6 hover:bg-white/15 transition-all">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                       {getTypeBadge(report.type)}
                       {getStatusBadge(report.status)}
                       <span className="text-white/40 text-xs">{new Date(report.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{report.title}</h3>
-                    <p className="text-white/60 text-sm">{report.description}</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-1 break-words">{report.title}</h3>
+                    <p className="text-white/60 text-sm break-words">{report.description}</p>
                     {report.reporter && (
-                      <p className="text-white/40 text-xs mt-2">Reported by: {report.reporter.firstName} {report.reporter.lastName} ({report.reporter.email})</p>
+                      <p className="text-white/40 text-xs mt-2 break-words">Reported by: {report.reporter.firstName} {report.reporter.lastName} ({report.reporter.email})</p>
                     )}
                   </div>
                   {report.status !== "RESOLVED" && report.status !== "DISMISSED" && (
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex flex-wrap gap-2 shrink-0 w-full sm:w-auto">
                       <button onClick={() => handleUpdateStatus(report.id, "RESOLVED")} disabled={actionLoading === report.id}
-                        className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg text-sm font-medium hover:bg-green-500/30 disabled:opacity-50 flex items-center gap-1">
+                        className="flex-1 sm:flex-none px-4 py-2 bg-green-500/20 text-green-300 rounded-lg text-sm font-medium hover:bg-green-500/30 disabled:opacity-50 flex items-center justify-center gap-1">
                         {actionLoading === report.id ? <FaSpinner className="w-3 h-3 animate-spin" /> : <FaCheckCircle className="w-3 h-3" />}Resolve
                       </button>
                       <button onClick={() => handleUpdateStatus(report.id, "DISMISSED")} disabled={actionLoading === report.id}
-                        className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg text-sm font-medium hover:bg-red-500/30 disabled:opacity-50 flex items-center gap-1">
+                        className="flex-1 sm:flex-none px-4 py-2 bg-red-500/20 text-red-300 rounded-lg text-sm font-medium hover:bg-red-500/30 disabled:opacity-50 flex items-center justify-center gap-1">
                         {actionLoading === report.id ? <FaSpinner className="w-3 h-3 animate-spin" /> : <FaTimesCircle className="w-3 h-3" />}Dismiss
                       </button>
                     </div>
@@ -176,7 +176,7 @@ export default function AdminReportsPage() {
         </div>
 
         {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
             <span className="text-white/50 text-sm">Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}</span>
             <div className="flex gap-2">
               <button onClick={() => fetchReports(pagination.page - 1)} disabled={pagination.page <= 1}

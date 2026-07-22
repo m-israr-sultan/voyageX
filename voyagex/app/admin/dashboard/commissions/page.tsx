@@ -374,7 +374,7 @@ export default function CommissionsPage() {
       {/* Mark Paid Modal */}
       {showPaymentModal && selectedCommission && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="px-5 py-3.5 border-b border-gray-200 flex justify-between items-center">
               <h3 className="font-semibold text-gray-900">Mark Commission as Paid</h3>
               <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600">

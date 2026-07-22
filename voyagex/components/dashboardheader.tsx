@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaBell, FaSearch, FaUserCircle, FaBars } from "react-icons/fa";
-import { notificationsApi, usersApi } from "@/lib/api";
+import { agenciesApi, notificationsApi, usersApi } from "@/lib/api";
 import { clearAuth } from "@/lib/auth";
 import { getImageUrl } from "@/lib/image-utils";
 
@@ -36,19 +36,31 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
 
   const basePath = roleBasePaths[role] || "traveler-panel";
 
-  // Fetch user profile from backend
+  // Fetch display name + avatar for the header.
+  // Agencies store their identity image on agencies.logo (not users.avatar) —
+  // same source the working agency profile page uses via agenciesApi.getMyProfile().
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await usersApi.getProfile();
-        const result = response.data;
-        if (result.success && result.data) {
-          const userData = result.data.user || result.data;
-          const name = userData.firstName && userData.lastName 
-            ? `${userData.firstName} ${userData.lastName}`
-            : userData.email?.split("@")[0] || "User";
-          setUserName(name);
-          setUserImage(userData.avatar || "");
+        if (role === "agency") {
+          const response = await agenciesApi.getMyProfile();
+          const result = response.data;
+          const agency = result?.success !== undefined ? result.data : result;
+          if (agency) {
+            setUserName(agency.name || "Agency");
+            setUserImage(agency.logo || "");
+          }
+        } else {
+          const response = await usersApi.getProfile();
+          const result = response.data;
+          if (result.success && result.data) {
+            const userData = result.data.user || result.data;
+            const name = userData.firstName && userData.lastName
+              ? `${userData.firstName} ${userData.lastName}`
+              : userData.email?.split("@")[0] || "User";
+            setUserName(name);
+            setUserImage(userData.avatar || "");
+          }
         }
       } catch (err) {
         console.error("Error fetching user profile:", err);
@@ -57,7 +69,7 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
       }
     };
     fetchUserProfile();
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -170,7 +182,7 @@ export default function DashboardHeader({ role, onMenuClick }: HeaderProps) {
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-[min(100vw-1.5rem,24rem)] sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                   <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
                   {unreadCount > 0 && (

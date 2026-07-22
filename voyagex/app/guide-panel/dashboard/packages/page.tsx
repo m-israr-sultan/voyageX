@@ -505,7 +505,7 @@ export default function GuidePackagesPage() {
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="grid grid-cols-1 min-[425px]:grid-cols-3 gap-2 mb-2">
                   <input 
                     type="number" 
                     placeholder="Day" 

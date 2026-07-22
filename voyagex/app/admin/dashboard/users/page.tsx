@@ -101,8 +101,44 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        {/* Mobile cards */}
+        <div className="block sm:hidden divide-y divide-gray-100">
+          {filteredUsers.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-gray-400">No users found</div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div key={user.id} className="p-4 space-y-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
+                    <img src={user.avatar ? getImageUrl(user.avatar) : "/guid-placeholder.jpg"} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">{user.firstName} {user.lastName}</p>
+                    <p className="text-xs text-gray-500 break-all">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={getRoleBadge(user.role)}>{user.role}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${user.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                    {user.isActive ? "Active" : "Banned"}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-auto">{new Date(user.createdAt).toLocaleDateString()}</span>
+                </div>
+                {user.role !== "ADMIN" && (
+                  <button onClick={() => handleToggleStatus(user.id)} disabled={actionLoading === user.id}
+                    className={`w-full px-3 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 ${user.isActive ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"} disabled:opacity-50`}>
+                    {actionLoading === user.id ? <FaSpinner className="w-3 h-3 animate-spin" /> : user.isActive ? <FaUserSlash className="w-3 h-3" /> : <FaUserCheck className="w-3 h-3" />}
+                    {user.isActive ? "Ban" : "Unban"}
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">User</th>
@@ -127,14 +163,14 @@ export default function AdminUsersPage() {
                         <span className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-500">{user.email}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500 break-all">{user.email}</td>
                     <td className="px-5 py-3"><span className={getRoleBadge(user.role)}>{user.role}</span></td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${user.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
                         {user.isActive ? "Active" : "Banned"}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td className="px-5 py-3 text-sm text-gray-400 whitespace-nowrap">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-5 py-3 text-right">
                       <button onClick={() => handleToggleStatus(user.id)} disabled={actionLoading === user.id || user.role === "ADMIN"}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 ml-auto ${user.isActive ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-green-50 text-green-700 hover:bg-green-100"} disabled:opacity-50`}>

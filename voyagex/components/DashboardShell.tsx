@@ -55,7 +55,7 @@ export default function DashboardShell({
   }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen w-full max-w-[100vw] bg-gray-50 overflow-x-hidden">
       <DashboardSideBar
         role={role}
         basePath={basePath}
@@ -68,8 +68,12 @@ export default function DashboardShell({
         userImage={userImage}
         onMenuClick={() => setSidebarOpen((open) => !open)}
       />
-      <main className="lg:ml-64 pt-14 p-4 sm:p-6 min-w-0 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto">{children}</div>
+      {/*
+        Sidebar is fixed/off-canvas below lg, so main stays full-width (no layout shift).
+        From lg+, offset by sidebar width (w-64).
+      */}
+      <main className="w-full lg:ml-64 lg:w-[calc(100%-16rem)] pt-14 p-3 min-[375px]:p-4 sm:p-6 min-w-0 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto w-full min-w-0">{children}</div>
       </main>
     </div>
   );

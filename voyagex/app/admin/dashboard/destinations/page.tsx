@@ -201,8 +201,8 @@ export default function AdminDestinationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-gray-900">Destinations</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {destinations.length} destinations
@@ -210,7 +210,7 @@ export default function AdminDestinationsPage() {
         </div>
         <button
           onClick={openAddForm}
-          className="px-4 py-2 bg-[#008A1E] text-white rounded-lg text-sm font-medium hover:bg-[#006816] flex items-center gap-2"
+          className="w-full sm:w-auto px-4 py-2 bg-[#008A1E] text-white rounded-lg text-sm font-medium hover:bg-[#006816] flex items-center justify-center gap-2 shrink-0"
         >
           <FaPlus className="w-3 h-3" /> Add Destination
         </button>
@@ -251,7 +251,7 @@ export default function AdminDestinationsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     City *
@@ -353,7 +353,7 @@ export default function AdminDestinationsPage() {
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[560px]">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">

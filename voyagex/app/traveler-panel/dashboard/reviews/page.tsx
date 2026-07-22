@@ -173,7 +173,7 @@ export default function TravelerReviewsPage() {
       {reviews.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Your Review Stats</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <div className="text-center">
               <div className="text-2xl sm:text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}</div>
               <div className="flex justify-center mt-1">{renderStars(Math.round(averageRating))}</div>

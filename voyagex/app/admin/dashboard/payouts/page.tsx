@@ -429,7 +429,7 @@ export default function AdminPayoutsPage() {
 
       {selectedAccount && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900">Reject Payout Account</h3>
             <p className="text-sm text-gray-500 mt-1">
               {guideName(selectedAccount)} — {selectedAccount.accountTitle}

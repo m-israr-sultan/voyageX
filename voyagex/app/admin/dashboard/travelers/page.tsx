@@ -83,8 +83,68 @@ export default function AdminTravelersPage() {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        {/* Mobile cards */}
+        <div className="block sm:hidden divide-y divide-gray-100">
+          {filteredTravelers.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-gray-400">No travelers found</div>
+          ) : (
+            filteredTravelers.map((traveler) => (
+              <div key={traveler.id} className="p-4 space-y-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
+                    <img
+                      src={traveler.avatar ? getImageUrl(traveler.avatar) : "/guid-placeholder.jpg"}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/guid-placeholder.jpg"; }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {traveler.firstName || ""} {traveler.lastName || ""}
+                    </p>
+                    <p className="text-xs text-gray-500 break-all">{traveler.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    traveler.isEmailVerified ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+                  }`}>
+                    {traveler.isEmailVerified ? "Verified" : "Pending"}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    traveler.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                  }`}>
+                    {traveler.isActive ? "Active" : "Banned"}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-auto">
+                    {new Date(traveler.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleToggleStatus(traveler.id)}
+                  disabled={actionLoading === traveler.id}
+                  className={`w-full px-3 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 ${
+                    traveler.isActive ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
+                  } disabled:opacity-50`}
+                >
+                  {actionLoading === traveler.id ? (
+                    <FaSpinner className="w-3 h-3 animate-spin" />
+                  ) : traveler.isActive ? (
+                    <FaUserSlash className="w-3 h-3" />
+                  ) : (
+                    <FaUserCheck className="w-3 h-3" />
+                  )}
+                  {traveler.isActive ? "Ban" : "Unban"}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">Traveler</th>
@@ -104,7 +164,7 @@ export default function AdminTravelersPage() {
                 filteredTravelers.map((traveler) => (
                   <tr key={traveler.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
                           <img
                             src={traveler.avatar ? getImageUrl(traveler.avatar) : "/guid-placeholder.jpg"}
@@ -113,12 +173,12 @@ export default function AdminTravelersPage() {
                             onError={(e) => { (e.target as HTMLImageElement).src = "/guid-placeholder.jpg"; }}
                           />
                         </div>
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-gray-900 truncate">
                           {traveler.firstName || ""} {traveler.lastName || ""}
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-500">{traveler.email}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500 break-all">{traveler.email}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                         traveler.isEmailVerified ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
@@ -133,7 +193,7 @@ export default function AdminTravelersPage() {
                         {traveler.isActive ? "Active" : "Banned"}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-400">
+                    <td className="px-5 py-3 text-sm text-gray-400 whitespace-nowrap">
                       {new Date(traveler.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3 text-right">

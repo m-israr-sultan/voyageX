@@ -71,20 +71,20 @@ export default function FinancialSettingsPage() {
             <h2 className="font-medium capitalize mb-3">{category}</h2>
             <div className="space-y-4">
               {items.map((s) => (
-                <div key={s.key} className="grid sm:grid-cols-[1fr_200px_auto] gap-2 items-start">
-                  <div>
-                    <p className="text-sm font-medium">{s.label || s.key}</p>
+                <div key={s.key} className="grid grid-cols-1 sm:grid-cols-[1fr_minmax(8rem,12rem)_auto] gap-2 items-start">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium break-words">{s.label || s.key}</p>
                     {s.description && <p className="text-xs text-gray-500">{s.description}</p>}
                   </div>
                   <input
                     value={draft[s.key] ?? ""}
                     onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                    className="w-full border rounded-lg px-3 py-2 text-sm min-w-0"
                   />
                   <button
                     onClick={() => save(s.key)}
                     disabled={saving === s.key}
-                    className="px-3 py-2 text-sm border rounded-lg flex items-center gap-1 disabled:opacity-50"
+                    className="w-full sm:w-auto px-3 py-2 text-sm border rounded-lg flex items-center justify-center gap-1 disabled:opacity-50"
                   >
                     {saving === s.key ? <FaSpinner className="animate-spin" /> : <FaSave />}
                     Save

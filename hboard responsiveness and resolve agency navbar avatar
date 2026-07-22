@@ -1,0 +1,40 @@
+warning: in the working copy of 'voyagex/app/admin/dashboard/subscriptions/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/admin/dashboard/verifications/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/agency-panel/dashboard/commissions/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/agency-panel/dashboard/profile/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/agency-panel/dashboard/subscription/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/guide-panel/dashboard/profile/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/message/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/app/message/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/components/dashboardheader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'voyagex/components/dashboardsideBar.tsx', LF will be replaced by CRLF the next time Git touches it
+ .../app/admin/dashboard/agencies/approval/page.tsx |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/agencies/page.tsx      | 57 [32m+++++++++++++++[m[31m--[m
+ voyagex/app/admin/dashboard/analytics/page.tsx     | 20 [32m+++[m[31m---[m
+ voyagex/app/admin/dashboard/commissions/page.tsx   |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/destinations/page.tsx  | 10 [32m+[m[31m--[m
+ .../admin/dashboard/financial-settings/page.tsx    | 10 [32m+[m[31m--[m
+ .../app/admin/dashboard/guides/approval/page.tsx   |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/guides/page.tsx        | 56 [32m+++++++++++++++[m[31m--[m
+ .../app/admin/dashboard/manual-bookings/page.tsx   |  6 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/monitoring/page.tsx    |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/payouts/page.tsx       |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/profile/page.tsx       |  6 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/reports/page.tsx       | 54 [32m++++++++[m[31m--------[m
+ voyagex/app/admin/dashboard/subscriptions/page.tsx |  2 [32m+[m[31m-[m
+ voyagex/app/admin/dashboard/travelers/page.tsx     | 72 [32m++++++++++++++++++++[m[31m--[m
+ voyagex/app/admin/dashboard/users/page.tsx         | 44 [32m+++++++++++[m[31m--[m
+ voyagex/app/admin/dashboard/verifications/page.tsx | 16 [32m++[m[31m---[m
+ .../agency-panel/dashboard/commissions/page.tsx    |  2 [32m+[m[31m-[m
+ .../app/agency-panel/dashboard/packages/page.tsx   |  2 [32m+[m[31m-[m
+ .../app/agency-panel/dashboard/profile/page.tsx    |  2 [32m+[m[31m-[m
+ .../agency-panel/dashboard/subscription/page.tsx   |  2 [32m+[m[31m-[m
+ .../app/guide-panel/dashboard/packages/page.tsx    |  2 [32m+[m[31m-[m
+ voyagex/app/guide-panel/dashboard/profile/page.tsx |  6 [32m+[m[31m-[m
+ voyagex/app/message/[id]/page.tsx                  | 58 [32m++++++++[m[31m---------[m
+ voyagex/app/message/page.tsx                       | 32 [32m+++++[m[31m-----[m
+ .../app/traveler-panel/dashboard/reviews/page.tsx  |  2 [32m+[m[31m-[m
+ voyagex/components/DashboardShell.tsx              | 10 [32m++[m[31m-[m
+ voyagex/components/dashboardheader.tsx             | 38 [32m++++++++[m[31m----[m
+ voyagex/components/dashboardsideBar.tsx            |  5 [32m+[m[31m-[m
+ 29 files changed, 364 insertions(+), 160 deletions(-)

@@ -301,13 +301,13 @@ export default function MessagesPage() {
   const messages = conversation.messages || [];
 
   return (
-    <div className="min-h-screen bg-[#F2F4F7]">
+    <div className="min-h-screen bg-[#F2F4F7] overflow-x-hidden">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-3 min-[375px]:px-4 py-6 sm:py-8 overflow-x-hidden">
         <div className="mb-4">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-[#008A1E] hover:text-[#006816] font-medium transition-colors"
+            className="inline-flex items-center gap-2 text-[#008A1E] hover:text-[#006816] font-medium transition-colors text-sm sm:text-base"
           >
             <FaArrowLeft /> Back
           </button>
@@ -319,11 +319,11 @@ export default function MessagesPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden h-[calc(100vh-250px)] min-h-[600px] flex flex-col">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-white">
-            <div className="flex items-center gap-4">
-              <Link href={getProfileLink()} className="relative">
-                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden h-[calc(100dvh-9rem)] sm:h-[calc(100vh-12rem)] min-h-0 max-h-[800px] flex flex-col">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between bg-white gap-2 min-w-0">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <Link href={getProfileLink()} className="relative shrink-0">
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gray-200">
                   <Image
                     src={getRecipientImage()}
                     alt={recipientName}
@@ -338,24 +338,26 @@ export default function MessagesPage() {
                 </div>
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
               </Link>
-              <div>
+              <div className="min-w-0 flex-1">
                 <Link href={getProfileLink()} className="hover:text-[#008A1E] transition-colors">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900">{recipientName}</h2>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                    <h2 className="text-base sm:text-xl font-bold text-gray-900 truncate max-w-full">{recipientName}</h2>
                     {isAgency && recipient?.isVerified && (
-                      <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Verified</span>
+                      <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full shrink-0">Verified</span>
                     )}
                     {!isTraveler && renderStars(getRecipientRating())}
                   </div>
                 </Link>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FaMapMarkerAlt className="w-3 h-3" />
-                  <span>{getRecipientLocation()}</span>
-                  <span className="mx-2">•</span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-sm text-gray-600 mt-0.5">
+                  <span className="inline-flex items-center gap-1 min-w-0">
+                    <FaMapMarkerAlt className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{getRecipientLocation()}</span>
+                  </span>
+                  <span className="hidden min-[375px]:inline text-gray-300">•</span>
                   {isAgency ? (
-                    <><FaBriefcase className="w-3 h-3" /><span>{getRecipientSubtitle()}</span></>
+                    <span className="inline-flex items-center gap-1 min-w-0"><FaBriefcase className="w-3 h-3 shrink-0" /><span className="truncate">{getRecipientSubtitle()}</span></span>
                   ) : isGuide ? (
-                    <span className="text-[#008A1E] font-medium">{getRecipientSubtitle()}</span>
+                    <span className="text-[#008A1E] font-medium truncate">{getRecipientSubtitle()}</span>
                   ) : (
                     <span className="text-gray-500">Traveler</span>
                   )}
@@ -365,7 +367,7 @@ export default function MessagesPage() {
             {/* Phone/video call buttons removed — VoyageX text messaging only */}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-6 bg-gray-50 min-h-0">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <FaEnvelope className="w-16 h-16 text-gray-300 mb-4" />
@@ -378,9 +380,9 @@ export default function MessagesPage() {
                   const isMyMessage = message.senderId === currentUser?.id;
                   return (
                     <div key={message.id} className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}>
-                      <div className="flex items-end gap-2 max-w-[70%]">
+                      <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[70%] min-w-0">
                         {!isMyMessage && (
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                          <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                             <Image
                               src={getRecipientImage()}
                               alt={recipientName}
@@ -396,7 +398,7 @@ export default function MessagesPage() {
                         )}
                         <div
                           onClick={() => message._failed ? handleRetryFailed(message) : undefined}
-                          className={`px-4 py-2 rounded-2xl ${
+                          className={`px-3 sm:px-4 py-2 rounded-2xl min-w-0 ${
                             isMyMessage
                               ? message._failed
                                 ? "bg-red-500 text-white rounded-br-none cursor-pointer"
@@ -406,7 +408,7 @@ export default function MessagesPage() {
                               : "bg-white text-gray-800 rounded-bl-none shadow-sm"
                           }`}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
                           <div
                             className={`flex items-center justify-end gap-1 mt-1 text-xs ${
                               isMyMessage ? "text-green-100" : "text-gray-500"
@@ -438,8 +440,8 @@ export default function MessagesPage() {
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 bg-white">
-            <div className="flex items-center gap-3">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-white shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
               <input
                 ref={messageInputRef}
                 type="text"
@@ -447,15 +449,15 @@ export default function MessagesPage() {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={`Message ${recipientName}...`}
-                className="flex-1 px-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-[#008A1E] focus:bg-white transition-colors"
+                className="flex-1 min-w-0 px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-[#008A1E] focus:bg-white transition-colors text-sm sm:text-base"
                 disabled={sending}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim() || sending}
-                className="w-12 h-12 bg-[#008A1E] text-white rounded-full flex items-center justify-center hover:bg-[#006816] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-[#008A1E] text-white rounded-full flex items-center justify-center hover:bg-[#006816] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FaPaperPlane className="w-5 h-5" />
+                <FaPaperPlane className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>

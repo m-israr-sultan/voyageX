@@ -39,22 +39,22 @@ function presetToRange(preset: RangePreset): { startDate: string; endDate: strin
 
 function Card({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white border rounded-xl p-4">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-xl font-semibold mt-1 text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    <div className="bg-white border rounded-xl p-3 sm:p-4 min-w-0 overflow-hidden">
+      <p className="text-xs text-gray-500 truncate">{label}</p>
+      <p className="text-lg sm:text-xl font-semibold mt-1 text-gray-900 break-words">{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5 break-words">{sub}</p>}
     </div>
   );
 }
 
 function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="bg-white border rounded-xl p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white border rounded-xl p-3 sm:p-5 min-w-0 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 className="font-semibold text-gray-900">{title}</h2>
         {action}
       </div>
-      {children}
+      <div className="min-w-0 w-full">{children}</div>
     </div>
   );
 }
@@ -121,7 +121,7 @@ export default function AnalyticsDashboardPage() {
   }));
 
   return (
-    <div className="space-y-6 px-2 sm:px-0">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Platform Analytics</h1>
@@ -158,7 +158,7 @@ export default function AnalyticsDashboardPage() {
       ) : (
         <>
           {/* Overview cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 min-[375px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card label="Total Visits" value={overview?.totalVisitors ?? 0} />
             <Card label="Unique Visitors" value={overview?.uniqueVisitors ?? 0} />
             <Card label="Returning Visitors" value={overview?.returningVisitors ?? 0} />
@@ -171,7 +171,7 @@ export default function AnalyticsDashboardPage() {
 
           {/* Visitor trend */}
           <Section title="Visitor Trend">
-            <div className="h-64">
+            <div className="h-56 sm:h-64 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={visitorSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
